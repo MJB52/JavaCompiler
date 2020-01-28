@@ -16,7 +16,7 @@ namespace JavaCompiler
         {
             //open input file
             _mappedFile =  MemoryMappedFile.CreateFromFile(fileName);
-            //store reswords
+            //TODO: Store ResWords
         }
 
         public void GetNextToken()
@@ -53,14 +53,14 @@ namespace JavaCompiler
 
         private void ProcessToken()
         {
-            //Lexemes[1] = Globals.Ch;
+            Globals.Lexeme = Globals.Ch.ToString();
             GetNextCh();
-            switch (Globals.Lexeme[1])
+            switch (Globals.Lexeme[0])
             {
-                case char a when (a >= 'A' && a <= 'Z') || (a >= 'a' && a <= 'z') || (a == '_'):
+                case char a when char.IsLetter(char.ToLower(a)) || (a == '_'):
                     ProcessWordToken();
                     break;
-                case char b when b >= '0' && b <= '9':
+                case char b when char.IsDigit(b):
                     ProcessNumToken();
                     break;
                 case char c when c == '/':
@@ -79,7 +79,7 @@ namespace JavaCompiler
 
         private void ProcessWordToken()
         {
-
+            //Fill Lexeme
             throw new NotImplementedException();
         }
 
