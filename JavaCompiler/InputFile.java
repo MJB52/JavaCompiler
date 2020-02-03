@@ -7,6 +7,7 @@ class factorial {
 class Fac {
 	public int ComputeFac(int num) {
 		int num_aux;
+		string y = "x";
 		if(num < 1)
 			num_aux = 1.11;
 		else

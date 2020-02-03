@@ -25,6 +25,7 @@ namespace JavaCompiler
 
             Scanner.GetNextToken();
             Console.WriteLine(string.Format("{0,-10} | {1,-20} | {2,-0}", "Token", "Lexeme", "Attributes" ));
+            Console.WriteLine(new string('-', 46));
             string line = string.Empty;
             foreach (var item in Globals.FileTokens)
             {

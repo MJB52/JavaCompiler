@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -56,6 +57,7 @@ namespace JavaCompiler
         private void ProcessToken()
         {
             Globals.Lexeme = Globals.Ch.ToString();
+
             var ch = (char)_streamReader.Peek();
             switch (Globals.Lexeme[0])
             {
@@ -68,7 +70,7 @@ namespace JavaCompiler
                 case char c when c == '/' && ch == '*' || ch == '/':
                     ProcessComment();
                     break;
-                case char d when new Regex(@"[-+/*;,.{}()\[\]!=><]").IsMatch(d.ToString()):
+                case char d when new Regex(@"[-+/*;,.{}()\[\]!=><]").IsMatch(d.ToString()) || d == '"':
                     if (ch == '=' || ch == '|' || ch == '&')
                         ProcessDoubleToken();
                     else
@@ -176,6 +178,8 @@ namespace JavaCompiler
                         break;
                     default:
                         lexeme.Value = Globals.Lexeme;
+                        if(Globals.FileTokens.Last().Key == Tokens.QuoteT && ch == '"')
+                            lexeme.Type = ValueType.Literal;
                         Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IdT, lexeme));
                         break;
                 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace JavaCompiler
 {
-    public enum ValueType { None, Value, ValueR }
+    public enum ValueType { None, Value, ValueR, Literal }
 
     public interface ILexeme
     {
