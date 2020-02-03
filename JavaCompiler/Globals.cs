@@ -9,7 +9,7 @@ namespace JavaCompiler
         public static string Token { get; set; }
         public static string Lexeme { get; set; }
         public static char Ch { get; set; }
-        public static int LineNo { get; set; }
+        public static int LineNo { get; set; } = 1;
         public static int Value { get; set; }
         public static float ValueR { get; set; }
         public static List<KeyValuePair<Tokens, ILexeme>> FileTokens { get; } = new List<KeyValuePair<Tokens, ILexeme>>();

@@ -26,16 +26,18 @@ namespace JavaCompiler
                 {
                     using (_streamReader = new StreamReader(mmStream, ASCIIEncoding.ASCII))
                     {
-                        while (!_streamReader.EndOfStream)
+                        do
                         {
                             GetNextCh();
+                            if (Globals.Ch == '\uffff')
+                                break;
                             ProcessToken();
-                        }
+                        } while (!_streamReader.EndOfStream);
                     }
                 }
             }
-            ILexeme x = new Lexeme(Globals.Lexeme);
-            Globals.FileTokens.Add(KeyValuePair.Create(Tokens.EofT, x));
+            ILexeme lexeme = new Lexeme("eof");
+            Globals.FileTokens.Add(KeyValuePair.Create(Tokens.EofT, lexeme));
         }
 
         private void GetNextCh()
@@ -54,8 +56,7 @@ namespace JavaCompiler
         private void ProcessToken()
         {
             Globals.Lexeme = Globals.Ch.ToString();
-            GetNextCh();
-
+            var ch = (char)_streamReader.Peek();
             switch (Globals.Lexeme[0])
             {
                 case char a when char.IsLetter(a) || (a == '_'):
@@ -64,11 +65,11 @@ namespace JavaCompiler
                 case char b when char.IsDigit(b):
                     ProcessNumToken();
                     break;
-                case char c when c == '/' && Globals.Ch == '*' || Globals.Ch == '/':
+                case char c when c == '/' && ch == '*' || ch == '/':
                     ProcessComment();
                     break;
                 case char d when new Regex(@"[-+/*;,.{}()\[\]!=><]").IsMatch(d.ToString()):
-                    if (Globals.Ch == '=' || Globals.Ch == '|' || Globals.Ch == '&')
+                    if (ch == '=' || ch == '|' || ch == '&')
                         ProcessDoubleToken();
                     else
                         ProcessSingleToken();
@@ -83,11 +84,6 @@ namespace JavaCompiler
         {
             ILexeme lexeme = new Lexeme();
             var letterCount = 1;
-            if (Globals.Ch.IsLegalWordToken())
-            {
-                Globals.Lexeme += Globals.Ch;
-                letterCount++;
-            }
 
             var ch = (char)_streamReader.Peek();
             while (ch.IsLegalWordToken())
@@ -154,8 +150,8 @@ namespace JavaCompiler
                         lexeme.Value = Globals.Lexeme;
                         Globals.FileTokens.Add(KeyValuePair.Create(Tokens.WhileT, lexeme));
                         break;
-                        lexeme.Value = Globals.Lexeme;
                     case "System.out.println":
+                        lexeme.Value = Globals.Lexeme;
                         Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PrintT, lexeme));
                         break;
                     case "length":
@@ -179,6 +175,7 @@ namespace JavaCompiler
                         Globals.FileTokens.Add(KeyValuePair.Create(Tokens.NewT, lexeme));
                         break;
                     default:
+                        lexeme.Value = Globals.Lexeme;
                         Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IdT, lexeme));
                         break;
                 }
@@ -193,38 +190,36 @@ namespace JavaCompiler
 
         private void ProcessNumToken()
         {
-            if (char.IsDigit(Globals.Ch))
-            {
-                Globals.Lexeme += Globals.Ch;
-            }
-
             var ch = (char)_streamReader.Peek();
-            while (char.IsDigit(ch))
+            while (char.IsDigit(ch) || ch == '.')
             {
                 ch = (char)_streamReader.Read();
                 Globals.Lexeme += ch;
                 ch = (char)_streamReader.Peek();
             }
-            ILexeme lexeme = new NumLexeme(Globals.Lexeme, Globals.Lexeme.Contains('.') ? ValueType.ValueR : ValueType.Value);
+
+            ILexeme lexeme = new Lexeme(Globals.Lexeme, Globals.Lexeme.Contains('.') ? ValueType.ValueR : ValueType.Value);
             Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LiteralT, lexeme));
             Globals.Lexeme = string.Empty;
         }
 
         private void ProcessComment()
         {
-
-            if (Globals.Ch == '*')
+            var ch = (char)_streamReader.Read();
+            if (ch == '*')
             {
-                var ch = (char)_streamReader.Peek();
+                ch = (char)_streamReader.Peek();
                 while (ch != '*' && (char)_streamReader.Peek() != '/')
                 {
                     ch = (char)_streamReader.Read();
+                    if (ch == '\n')
+                        Globals.LineNo++;
                 }
             }
             else
             {
-                var ch = (char)_streamReader.Peek();
-                while (ch != '\n')
+                ch = (char)_streamReader.Peek();
+                while (!_streamReader.EndOfStream && ch != '\n')
                 {
                     ch = (char)_streamReader.Read();
                 }
@@ -235,7 +230,7 @@ namespace JavaCompiler
         private void ProcessDoubleToken()
         {
             ILexeme lexeme = new Lexeme();
-            Globals.Lexeme += Globals.Ch;
+            Globals.Lexeme += (char)_streamReader.Read();
             switch (Globals.Lexeme)
             {
                 case "<=":

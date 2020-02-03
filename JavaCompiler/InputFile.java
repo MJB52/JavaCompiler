@@ -8,9 +8,17 @@ class Fac {
 	public int ComputeFac(int num) {
 		int num_aux;
 		if(num < 1)
-			num_aux = 1;
+			num_aux = 1.11;
 		else
-			num_aux = num * (this.ComputeFac(num - 1));
+			num_aux = num * (this.ComputeFac(num - 1))/*yeye */;
 		return num_aux;
 	}
-}
+} //turn up
+
+//yeye
+
+/*
+
+skdfjslkjdjs
+
+*/
