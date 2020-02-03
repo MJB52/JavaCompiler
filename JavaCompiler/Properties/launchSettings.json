@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "JavaCompiler": {
+      "commandName": "Project",
+      "commandLineArgs": "InputFile.java"
+    }
+  }
+}

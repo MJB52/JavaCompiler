@@ -15,9 +15,7 @@ namespace JavaCompiler
 
         public Scanner(string fileName)
         {
-            //open input file
             _mappedFile = MemoryMappedFile.CreateFromFile(fileName);
-            //TODO: Store ResWords
         }
 
         public void GetNextToken()
@@ -36,18 +34,19 @@ namespace JavaCompiler
                     }
                 }
             }
-            Globals.FileTokens.Add(KeyValuePair.Create(Tokens.EofT, Globals.Lexeme));
+            ILexeme x = new Lexeme(Globals.Lexeme);
+            Globals.FileTokens.Add(KeyValuePair.Create(Tokens.EofT, x));
         }
 
         private void GetNextCh()
         {
-            var ch = (char)_streamReader.Read();
-            while (char.IsWhiteSpace(ch))
+            char ch;
+            do
             {
+                ch = (char)_streamReader.Read();
                 if (ch == '\n')
                     Globals.LineNo++;
-                ch = (char)_streamReader.Read();
-            }
+            } while (char.IsWhiteSpace(ch) || ch == '\0');
 
             Globals.Ch = ch;
         }
@@ -56,9 +55,10 @@ namespace JavaCompiler
         {
             Globals.Lexeme = Globals.Ch.ToString();
             GetNextCh();
+
             switch (Globals.Lexeme[0])
             {
-                case char a when char.IsLetter(char.ToLower(a)) || (a == '_'):
+                case char a when char.IsLetter(a) || (a == '_'):
                     ProcessWordToken();
                     break;
                 case char b when char.IsDigit(b):
@@ -74,86 +74,118 @@ namespace JavaCompiler
                         ProcessSingleToken();
                     break;
                 default:
-                    ConsoleLogger.LogUnknownLexeme(Globals.Lexeme, Globals.LineNo);
+                    ConsoleLogger.UnknownLexeme(Globals.Lexeme, Globals.LineNo);
                     break;
             }
         }
 
         private void ProcessWordToken()
         {
-            if (!char.IsWhiteSpace(Globals.Ch))
+            ILexeme lexeme = new Lexeme();
+            var letterCount = 1;
+            if (Globals.Ch.IsLegalWordToken())
             {
                 Globals.Lexeme += Globals.Ch;
-                var ch = (char)_streamReader.Read();
-                while (!char.IsWhiteSpace(ch))
-                {
-                    Globals.Lexeme += ch;
-                    ch = (char)_streamReader.Read();
-                }
+                letterCount++;
             }
 
-            switch (Globals.Lexeme)
+            var ch = (char)_streamReader.Peek();
+            while (ch.IsLegalWordToken())
             {
-                case "class":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ClassT, Globals.Lexeme));
-                    break;
-                case "public":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PublicT, Globals.Lexeme));
-                    break;
-                case "static":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.StaticT, Globals.Lexeme));
-                    break;
-                case "void":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.VoidT, Globals.Lexeme));
-                    break;
-                case "main":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.MainT, Globals.Lexeme));
-                    break;
-                case "String":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.StringT, Globals.Lexeme));
-                    break;
-                case "extends":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ExtendsT, Globals.Lexeme));
-                    break;
-                case "return":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ReturnT, Globals.Lexeme));
-                    break;
-                case "int":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IntT, Globals.Lexeme));
-                    break;
-                case "boolean":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.BooleanT, Globals.Lexeme));
-                    break;
-                case "if":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IfT, Globals.Lexeme));
-                    break;
-                case "else":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ElseT, Globals.Lexeme));
-                    break;
-                case "while":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.WhileT, Globals.Lexeme));
-                    break;
-                case "System.out.println":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PrintT, Globals.Lexeme));
-                    break;
-                case "length":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LengthT, Globals.Lexeme));
-                    break;
-                case "true":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.TrueT, Globals.Lexeme));
-                    break;
-                case "false":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.FalseT, Globals.Lexeme));
-                    break;
-                case "this":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ThisT, Globals.Lexeme));
-                    break;
-                case "new":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.NewT, Globals.Lexeme));
-                    break;
-                default:
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IdT, Globals.Lexeme));
-                    break;
+                ch = (char)_streamReader.Read();
+                Globals.Lexeme += ch;
+                letterCount++;
+                ch = (char)_streamReader.Peek();
+            }
+
+            if (letterCount <= 31)
+            {
+                switch (Globals.Lexeme)
+                {
+                    case "class":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ClassT, lexeme));
+                        break;
+                    case "public":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PublicT, lexeme));
+                        break;
+                    case "static":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.StaticT, lexeme));
+                        break;
+                    case "void":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.VoidT, lexeme));
+                        break;
+                    case "main":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.MainT, lexeme));
+                        break;
+                    case "String":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.StringT, lexeme));
+                        break;
+                    case "extends":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ExtendsT, lexeme));
+                        break;
+                    case "return":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ReturnT, lexeme));
+                        break;
+                    case "int":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IntT, lexeme));
+                        break;
+                    case "boolean":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.BooleanT, lexeme));
+                        break;
+                    case "if":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IfT, lexeme));
+                        break;
+                    case "else":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ElseT, lexeme));
+                        break;
+                    case "while":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.WhileT, lexeme));
+                        break;
+                        lexeme.Value = Globals.Lexeme;
+                    case "System.out.println":
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PrintT, lexeme));
+                        break;
+                    case "length":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LengthT, lexeme));
+                        break;
+                    case "true":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.TrueT, lexeme));
+                        break;
+                    case "false":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.FalseT, lexeme));
+                        break;
+                    case "this":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.ThisT, lexeme));
+                        break;
+                    case "new":
+                        lexeme.Value = Globals.Lexeme;
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.NewT, lexeme));
+                        break;
+                    default:
+                        Globals.FileTokens.Add(KeyValuePair.Create(Tokens.IdT, lexeme));
+                        break;
+                }
+            }
+            else
+            {
+                ConsoleLogger.IllegalLexeme(Globals.Lexeme, Globals.LineNo);
             }
 
             Globals.Lexeme = string.Empty;
@@ -161,18 +193,20 @@ namespace JavaCompiler
 
         private void ProcessNumToken()
         {
-            if (!char.IsWhiteSpace(Globals.Ch))
+            if (char.IsDigit(Globals.Ch))
             {
                 Globals.Lexeme += Globals.Ch;
-                var ch = (char)_streamReader.Read();
-                while (char.IsDigit(ch) || ch == '.')
-                {
-                    Globals.Lexeme += ch;
-                    ch = (char)_streamReader.Read();
-                }
             }
 
-            Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LiteralT, Globals.Lexeme));
+            var ch = (char)_streamReader.Peek();
+            while (char.IsDigit(ch))
+            {
+                ch = (char)_streamReader.Read();
+                Globals.Lexeme += ch;
+                ch = (char)_streamReader.Peek();
+            }
+            ILexeme lexeme = new NumLexeme(Globals.Lexeme, Globals.Lexeme.Contains('.') ? ValueType.ValueR : ValueType.Value);
+            Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LiteralT, lexeme));
             Globals.Lexeme = string.Empty;
         }
 
@@ -181,7 +215,7 @@ namespace JavaCompiler
 
             if (Globals.Ch == '*')
             {
-                var ch = (char)_streamReader.Read();
+                var ch = (char)_streamReader.Peek();
                 while (ch != '*' && (char)_streamReader.Peek() != '/')
                 {
                     ch = (char)_streamReader.Read();
@@ -189,16 +223,18 @@ namespace JavaCompiler
             }
             else
             {
-                var ch = (char)_streamReader.Read();
+                var ch = (char)_streamReader.Peek();
                 while (ch != '\n')
                 {
                     ch = (char)_streamReader.Read();
                 }
+                Globals.LineNo++;
             }
         }
 
         private void ProcessDoubleToken()
         {
+            ILexeme lexeme = new Lexeme();
             Globals.Lexeme += Globals.Ch;
             switch (Globals.Lexeme)
             {
@@ -206,16 +242,19 @@ namespace JavaCompiler
                 case ">=":
                 case "==":
                 case "!=":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RelOpT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RelOpT, lexeme));
                     break;
                 case "&&":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.MulOpT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.MulOpT, lexeme));
                     break;
                 case "||":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.AddOpT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.AddOpT, lexeme));
                     break;
                 default:
-                    ConsoleLogger.LogUnknownLexeme(Globals.Lexeme, Globals.LineNo);
+                    ConsoleLogger.UnknownLexeme(Globals.Lexeme, Globals.LineNo);
                     break;
             }
             Globals.Lexeme = string.Empty;
@@ -223,47 +262,70 @@ namespace JavaCompiler
 
         private void ProcessSingleToken()
         {
+            ILexeme lexeme = new Lexeme();
             switch (Globals.Lexeme)
             {
                 case "<":
                 case ">":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RelOpT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RelOpT, lexeme));
                     break;
                 case "=":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.AssignOpT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.AssignOpT, lexeme));
+                    break;
+                case "+":
+                case "-":
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.AddOpT, lexeme));
+                    break;
+                case "/":
+                case "*":
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.MulOpT, lexeme));
                     break;
                 case ".":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PeriodT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.PeriodT, lexeme));
                     break;
                 case ",":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.CommaT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.CommaT, lexeme));
                     break;
                 case ";":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.SemiT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.SemiT, lexeme));
                     break;
                 case "\"":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.EofT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.QuoteT, lexeme));
                     break;
                 case "{":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LBraceT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LBraceT, lexeme));
                     break;
                 case "}":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RBraceT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RBraceT, lexeme));
                     break;
                 case "(":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LParenT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LParenT, lexeme));
                     break;
                 case ")":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RParenT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RParenT, lexeme));
                     break;
                 case "[":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LBrackT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.LBrackT, lexeme));
                     break;
                 case "]":
-                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RBrackT, Globals.Lexeme));
+                    lexeme.Value = Globals.Lexeme;
+                    Globals.FileTokens.Add(KeyValuePair.Create(Tokens.RBrackT, lexeme));
                     break;
                 default:
-                    ConsoleLogger.LogUnknownLexeme(Globals.Lexeme, Globals.LineNo);
+                    ConsoleLogger.UnknownLexeme(Globals.Lexeme, Globals.LineNo);
                     break;
             }
             Globals.Lexeme = string.Empty;

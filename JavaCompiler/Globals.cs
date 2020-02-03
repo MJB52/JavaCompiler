@@ -12,7 +12,7 @@ namespace JavaCompiler
         public static int LineNo { get; set; }
         public static int Value { get; set; }
         public static float ValueR { get; set; }
-        public static List<KeyValuePair<Tokens, string>> FileTokens { get; } = new List<KeyValuePair<Tokens, string>>();
+        public static List<KeyValuePair<Tokens, ILexeme>> FileTokens { get; } = new List<KeyValuePair<Tokens, ILexeme>>();
     }
 
     public enum Tokens {

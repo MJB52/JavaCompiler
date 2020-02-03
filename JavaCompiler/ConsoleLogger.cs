@@ -21,9 +21,24 @@ namespace JavaCompiler
             Console.ForegroundColor = _neutralColor;
         }
         
-        public static void LogUnknownLexeme(string lexeme, int lineNumber)
+        public static void UnknownLexeme(string lexeme, int lineNumber)
         {
             Log(string.Format("Unknown lexeme: {0} at line number: {1}", lexeme, lineNumber), MessageType.Sad);
+        }
+
+        public static void IllegalLexeme(string lexeme, int lineNumber)
+        {
+            Log(string.Format("Illegal lexeme: {0} at line number: {1}", lexeme, lineNumber), MessageType.Sad);
+        }
+
+        public static void NoFilePassed()
+        {
+            Log("Please pass in a file to be compiled. ", MessageType.Sad);
+        }
+
+        public static void FileNotFound(string fileName)
+        {
+            Log($"Could not find file: {fileName}. ", MessageType.Sad);
         }
     }
 }
