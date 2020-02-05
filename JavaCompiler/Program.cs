@@ -3,15 +3,16 @@ using System.IO;
 
 namespace JavaCompiler
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            if(args.Length < 1)
+            if (args.Length < 1)
             {
                 ConsoleLogger.NoFilePassed();
                 Environment.Exit(-1);
             }
+
             var path = Directory.GetCurrentDirectory();
             path = Path.Combine(path, args[0]);
 
@@ -21,7 +22,7 @@ namespace JavaCompiler
                 Environment.Exit(-1);
             }
 
-            Console.WriteLine(string.Format("{0,-10} | {1,-20} | {2,-0}", "Token", "Lexeme", "Attributes"));
+            Console.WriteLine($"{"Token",-10} | {"Lexeme",-20} | {"Attributes",0}");
             Console.WriteLine(new string('-', 46));
 
             var Scanner = new Scanner(path);

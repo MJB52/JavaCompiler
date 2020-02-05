@@ -1,12 +1,7 @@
-﻿using System;
-
-namespace JavaCompiler
+﻿namespace JavaCompiler
 {
     public static class Extensions
     {
-        public static bool IsLegalWordToken(this Char ch)
-        {
-            return char.IsLetter(ch) || (ch == '_') || ch == '.';
-        }
+        public static bool IsLegalWordToken(this char ch) => char.IsLetter(ch) || ch == '_' || ch == '.';
     }
 }

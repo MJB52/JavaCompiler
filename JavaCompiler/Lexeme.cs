@@ -1,10 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JavaCompiler
+﻿namespace JavaCompiler
 {
-    public enum ValueType { None, Value, ValueR, Literal }
+    public enum ValueType
+    {
+        None,
+        Value,
+        ValueR,
+        Literal
+    }
 
     public interface ILexeme
     {
@@ -25,7 +27,7 @@ namespace JavaCompiler
             Type = type;
         }
 
-        public string Value { get ; set; }
+        public string Value { get; set; }
         public ValueType Type { get; set; }
     }
 }
