@@ -7,6 +7,7 @@ namespace JavaCompiler
     {
         public static string Lexeme { get; set; }
         public static char Ch { get; set; }
+        public static bool IsLiteral { get; set; } = false;
 
         public static int LineNo { get; set; } = 1;
         //public static List<KeyValuePair<Tokens, ILexeme>> FileTokens { get; } = new List<KeyValuePair<Tokens, ILexeme>>();
@@ -59,6 +60,7 @@ namespace JavaCompiler
         MulOpT,
         RelOpT,
         EofT,
-        UnknownT
+        UnknownT,
+        LiteralT
     }
 }

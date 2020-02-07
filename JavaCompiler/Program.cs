@@ -7,6 +7,7 @@ namespace JavaCompiler
     {
         private static void Main(string[] args)
         {
+            //args = new[] {"tokens2.java"};
             if (args.Length < 1)
             {
                 ConsoleLogger.NoFilePassed();
@@ -25,8 +26,8 @@ namespace JavaCompiler
             Console.WriteLine($"{"Token",-10} | {"Lexeme",-20} | {"Attributes",0}");
             Console.WriteLine(new string('-', 46));
 
-            var Scanner = new Scanner(path);
-            Scanner.GetNextToken();
+            var scanner = new Scanner(path);
+            scanner.GetNextToken();
         }
     }
 }

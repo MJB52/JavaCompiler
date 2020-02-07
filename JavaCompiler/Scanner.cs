@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -67,7 +68,7 @@ namespace JavaCompiler
                 case { } c when c == '/' && ch == '*' || ch == '/':
                     ProcessComment();
                     break;
-                case { } d when new Regex(@"[-+/*;,.{}()\[\]!=><]").IsMatch(d.ToString()) || d == '"':
+                case { } d when new Regex(@"[-+/*|&;,.{}()\[\]!=><]").IsMatch(d.ToString()) || d == '"':
                     if (ch == '=' || ch == '|' || ch == '&')
                         ProcessDoubleToken();
                     else
@@ -93,7 +94,7 @@ namespace JavaCompiler
                 ch = (char) _streamReader.Peek();
             }
 
-            if (letterCount <= 31)
+            if (letterCount <= 31 || Globals.IsLiteral)
                 switch (Globals.Lexeme)
                 {
                     case "class":
@@ -174,9 +175,17 @@ namespace JavaCompiler
                         break;
                     default:
                         _lexeme.Value = Globals.Lexeme;
-                        //if(ch == '"')
-                        //    _lexeme.Type = ValueType.Literal; //might be wrong to assume??
-                        Globals.Print(KeyValuePair.Create(Tokens.IdT, _lexeme));
+                        if (Globals.IsLiteral)
+                        {
+                            _lexeme.Type = ValueType.Literal;
+                            Globals.Print(KeyValuePair.Create(Tokens.LiteralT, _lexeme));
+                            Globals.IsLiteral = false;
+                        }
+                        else
+                        {
+                            Globals.Print(KeyValuePair.Create(Tokens.IdT, _lexeme));
+                        }
+
                         break;
                 }
             else
@@ -195,8 +204,16 @@ namespace JavaCompiler
                 ch = (char) _streamReader.Peek();
             }
 
-            _lexeme = new Lexeme(Globals.Lexeme, Globals.Lexeme.Contains('.') ? ValueType.ValueR : ValueType.Value);
-            Globals.Print(KeyValuePair.Create(Tokens.NumT, _lexeme));
+            if (Globals.Lexeme.Last() != '.')
+            {
+                _lexeme = new Lexeme(Globals.Lexeme, Globals.Lexeme.Contains('.') ? ValueType.ValueR : ValueType.Value);
+                Globals.Print(KeyValuePair.Create(Tokens.NumT, _lexeme));
+            }
+            else
+            {
+                ConsoleLogger.IllegalLexeme(Globals.Lexeme, Globals.LineNo);
+            }
+
             Globals.Lexeme = string.Empty;
         }
 
@@ -206,7 +223,7 @@ namespace JavaCompiler
             if (ch == '*')
             {
                 ch = (char) _streamReader.Peek();
-                while (ch != '*' && (char) _streamReader.Peek() != '/')
+                while (ch != '*' && (char) _streamReader.Peek() != '/' && !_streamReader.EndOfStream)
                 {
                     ch = (char) _streamReader.Read();
                     if (ch == '\n')
@@ -287,6 +304,7 @@ namespace JavaCompiler
                     Globals.Print(KeyValuePair.Create(Tokens.SemiT, _lexeme));
                     break;
                 case "\"":
+                    Globals.IsLiteral = true;
                     _lexeme.Value = Globals.Lexeme;
                     Globals.Print(KeyValuePair.Create(Tokens.QuoteT, _lexeme));
                     break;
