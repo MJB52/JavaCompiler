@@ -21,12 +21,12 @@ namespace JavaCompiler
 
         public static void UnknownLexeme(string lexeme, int lineNumber)
         {
-            Log($"Unknown lexeme: {lexeme} at line number: {lineNumber.ToString()}", MessageType.Sad);
+            Log($"Unknown lexeme: \"{lexeme}\" at line number: {lineNumber.ToString()}", MessageType.Sad);
         }
 
         public static void IllegalLexeme(string lexeme, int lineNumber)
         {
-            Log($"Illegal lexeme: {lexeme} at line number: {lineNumber.ToString()}", MessageType.Sad);
+            Log($"Illegal lexeme: \"{lexeme}\" at line number: {lineNumber.ToString()}", MessageType.Sad);
         }
 
         public static void NoFilePassed()

@@ -7,7 +7,6 @@ namespace JavaCompiler
     {
         private static void Main(string[] args)
         {
-            //args = new[] {"tokens2.java"};
             if (args.Length < 1)
             {
                 ConsoleLogger.NoFilePassed();

@@ -65,7 +65,7 @@ namespace JavaCompiler
                 case { } b when char.IsDigit(b):
                     ProcessNumToken();
                     break;
-                case { } c when c == '/' && ch == '*' || ch == '/':
+                case { } c when (c == '/' && ch == '*') || (c == '/' && ch == '/'):
                     ProcessComment();
                     break;
                 case { } d when new Regex(@"[-+/*|&;,.{}()\[\]!=><]").IsMatch(d.ToString()) || d == '"':
@@ -84,17 +84,28 @@ namespace JavaCompiler
         {
             _lexeme = new Lexeme();
             var letterCount = 1;
-
-            var ch = (char) _streamReader.Peek();
-            while (ch.IsLegalWordToken())
+            if (!Globals.IsLiteral)
             {
-                ch = (char) _streamReader.Read();
-                Globals.Lexeme += ch;
-                letterCount++;
-                ch = (char) _streamReader.Peek();
+                var ch = (char) _streamReader.Peek();
+                while (ch.IsLegalWordToken())
+                {
+                    ch = (char) _streamReader.Read();
+                    Globals.Lexeme += ch;
+                    letterCount++;
+                    ch = (char) _streamReader.Peek();
+                }
             }
-
-            if (letterCount <= 31 || Globals.IsLiteral)
+            else
+            {
+                var ch = (char) _streamReader.Peek();
+                while (ch != '"' && ch != '\n' && !_streamReader.EndOfStream)
+                {
+                    ch = (char) _streamReader.Read();
+                    Globals.Lexeme += ch;
+                    ch = (char) _streamReader.Peek();
+                }
+            }
+            if (letterCount <= 31 || Globals.IsLiteral && Globals.Lexeme.Last() == '"')
                 switch (Globals.Lexeme)
                 {
                     case "class":
@@ -219,21 +230,29 @@ namespace JavaCompiler
 
         private void ProcessComment()
         {
-            var ch = (char) _streamReader.Read();
+            var ch = (char) _streamReader.Peek();
             if (ch == '*')
             {
-                ch = (char) _streamReader.Peek();
-                while (ch != '*' && (char) _streamReader.Peek() != '/' && !_streamReader.EndOfStream)
+                _streamReader.Read();
+                do
                 {
                     ch = (char) _streamReader.Read();
                     if (ch == '\n')
                         Globals.LineNo++;
-                }
+                    
+                    if (ch == '/' && (char) _streamReader.Peek() == '*')
+                            ProcessComment();
+
+                    if (ch == '*' && _streamReader.Peek() == '/')
+                    {
+                        _streamReader.Read();
+                        break;
+                    }
+                } while (!_streamReader.EndOfStream);
             }
             else
             {
-                ch = (char) _streamReader.Peek();
-                while (!_streamReader.EndOfStream && ch != '\n') ch = (char) _streamReader.Read();
+                _streamReader.ReadLine();
                 Globals.LineNo++;
             }
         }
