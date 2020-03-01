@@ -39,6 +39,19 @@ namespace JavaCompiler
             Log($"Could not find file: {fileName}. ", MessageType.Sad);
         }
 
+        public static void ParseError(Tokens expectedToken, Tokens actualToken, int lineNo)
+        {
+            var eToken = Enum.GetName(typeof(Tokens), expectedToken);
+            var aToken = Enum.GetName(typeof(Tokens), actualToken);
+            Log($"Parse error on line no. {lineNo}. Received: {actualToken}, Expected:{expectedToken} ",
+                MessageType.Sad);
+        }
+
+        public static void SuccessfulParse()
+        {
+            Log("File was successfully parsed!", MessageType.Happy);
+        }
+
         private enum MessageType
         {
             Happy,

@@ -22,11 +22,11 @@ namespace JavaCompiler
                 Environment.Exit(-1);
             }
 
-            Console.WriteLine($"{"Token",-10} | {"Lexeme",-20} | {"Attributes",0}");
-            Console.WriteLine(new string('-', 46));
-
             var scanner = new Scanner(path);
+
+            var parser = new Parser(scanner);
             scanner.GetNextToken();
+            parser.Prog();
         }
     }
 }
