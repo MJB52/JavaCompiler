@@ -9,6 +9,20 @@
         public static int LineNo { get; set; } = 1;
     }
 
+    public enum TypeOfVariable
+    {
+        CharType,
+        IntType,
+        FloatType
+    }
+
+    public enum ParameterPassMode
+    {
+        Value,
+        Reference,
+        Out
+    }
+
     public enum Tokens
     {
         ClassT,
