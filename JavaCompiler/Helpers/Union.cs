@@ -3,14 +3,9 @@ using System.Diagnostics;
 
 namespace JavaCompiler
 {
-    public class UnionBase<A>
+    public class UnionBase
     {
-        private readonly dynamic value;
-
-        public UnionBase(A a)
-        {
-            value = a;
-        }
+        private readonly object value;
 
         protected UnionBase(object x)
         {
@@ -30,16 +25,14 @@ namespace JavaCompiler
 
                 var pt = mi.GetParameters()[0].ParameterType;
                 if (pt.IsAssignableFrom(vt))
-                    return (T) mi.Invoke(null, new object[] {value});
+                    return (T) mi.Invoke(null, new[] {value});
             }
 
             throw new Exception("No appropriate matching function was provided");
         }
-
-        public T Match<T>(Func<A, T> fa) => InternalMatch<T>(fa);
     }
 
-    public class Union<A, B> : UnionBase<A>
+    public class Union<A, B> : UnionBase
     {
         public Union(A a) : base(a)
         {
@@ -56,7 +49,7 @@ namespace JavaCompiler
         public T Match<T>(Func<A, T> fa, Func<B, T> fb) => InternalMatch<T>(fa, fb);
     }
 
-    public class Union<A, B, C> : Union<A, B>
+    public class Union<A, B, C> : UnionBase
     {
         public Union(A a) : base(a)
         {
@@ -77,7 +70,7 @@ namespace JavaCompiler
         public T Match<T>(Func<A, T> fa, Func<B, T> fb, Func<C, T> fc) => InternalMatch<T>(fa, fb, fc);
     }
 
-    public class Union<A, B, C, D> : Union<A, B, C>
+    public class Union<A, B, C, D> : UnionBase
     {
         public Union(A a) : base(a)
         {

@@ -9,7 +9,6 @@ namespace JavaCompiler
     public class Scanner : IScanner
     {
         private readonly StreamReader _streamReader;
-        private ILexeme _lexeme;
 
         public Scanner(string fileName)
         {
@@ -20,6 +19,7 @@ namespace JavaCompiler
 
         public void GetNextToken()
         {
+            Globals.Lexeme = string.Empty;
             if (_streamReader.EndOfStream)
             {
                 Globals.Token = Tokens.EofT;
@@ -74,7 +74,7 @@ namespace JavaCompiler
                         ProcessSingleToken();
                     break;
                 case {} e when _streamReader.EndOfStream:
-                    _lexeme = new Lexeme("eof");
+                    Globals.Lexeme = "eof";
                     Globals.Token = Tokens.EofT;
                     break;
                 default:
@@ -85,7 +85,6 @@ namespace JavaCompiler
 
         private void ProcessWordToken()
         {
-            _lexeme = new Lexeme();
             var letterCount = 1;
             if (!Globals.IsLiteral)
             {
@@ -175,7 +174,6 @@ namespace JavaCompiler
                     default:
                         if (Globals.IsLiteral)
                         {
-                            _lexeme.Type = ValueType.Literal;
                             Globals.Token = Tokens.LiteralT;
                             Globals.IsLiteral = false;
                         }
@@ -188,8 +186,6 @@ namespace JavaCompiler
                 }
             else
                 ConsoleLogger.IllegalLexeme(Globals.Lexeme, Globals.LineNo);
-
-            Globals.Lexeme = string.Empty;
         }
 
         private void ProcessNumToken()
@@ -203,16 +199,9 @@ namespace JavaCompiler
             }
 
             if (Globals.Lexeme.Last() != '.')
-            {
-                _lexeme = new Lexeme(Globals.Lexeme, Globals.Lexeme.Contains('.') ? ValueType.ValueR : ValueType.Value);
                 Globals.Token = Tokens.NumT;
-            }
             else
-            {
                 ConsoleLogger.IllegalLexeme(Globals.Lexeme, Globals.LineNo);
-            }
-
-            Globals.Lexeme = string.Empty;
         }
 
         private void ProcessComment()
@@ -246,7 +235,6 @@ namespace JavaCompiler
 
         private void ProcessDoubleToken()
         {
-            _lexeme = new Lexeme();
             Globals.Lexeme += (char) _streamReader.Read();
             switch (Globals.Lexeme)
             {
@@ -266,13 +254,10 @@ namespace JavaCompiler
                     ConsoleLogger.UnknownLexeme(Globals.Lexeme, Globals.LineNo);
                     break;
             }
-
-            Globals.Lexeme = string.Empty;
         }
 
         private void ProcessSingleToken()
         {
-            _lexeme = new Lexeme();
             switch (Globals.Lexeme)
             {
                 case "<":
@@ -325,8 +310,6 @@ namespace JavaCompiler
                     ConsoleLogger.UnknownLexeme(Globals.Lexeme, Globals.LineNo);
                     break;
             }
-
-            Globals.Lexeme = string.Empty;
         }
     }
 }

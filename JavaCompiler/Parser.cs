@@ -5,11 +5,12 @@ namespace JavaCompiler
     public class Parser
     {
         private readonly IScanner _scanner;
+        private readonly ISymbolTable _symTab;
 
-        public Parser(IScanner scanner)
+        public Parser(IScanner scanner, ISymbolTable symTab)
         {
-            _scanner = scanner ?? throw new ArgumentNullException(
-                           "Mike ur dum for not passing in a scanner here");
+            _scanner = scanner ?? throw new ArgumentNullException(nameof(scanner));
+            _symTab = symTab ?? throw new ArgumentNullException(nameof(symTab));
         }
 
         public void Prog()

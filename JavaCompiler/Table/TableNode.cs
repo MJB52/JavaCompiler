@@ -1,3 +1,4 @@
+using FunctionalSharp.DiscriminatedUnions;
 using JavaCompiler.Entry_Types;
 
 namespace JavaCompiler
@@ -18,6 +19,8 @@ namespace JavaCompiler
         public int Depth;
         public Lexeme Lexeme;
         public Tokens Token;
-        public Union<ConstantType, FunctionType, VarType, ClassType> TypeOfEntry; // tag field for the union
+
+        public DiscriminatedUnion<ConstantType, FunctionType, VarType, ClassType>
+            TypeOfEntry; // tag field for the union
     }
 }

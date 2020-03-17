@@ -1,6 +1,13 @@
 ﻿using System;
 using System.IO;
 
+/// <summary>
+/// JavaCompiler
+/// Author: Michael Bauer
+/// Class: Compilers with Dr. Hamer
+///
+/// Project External References/NugetPackages: FunctionalSharp.DiscriminatedUnions by Patrick Van Lohuizen 
+/// </summary>
 namespace JavaCompiler
 {
     internal class Program
@@ -23,10 +30,12 @@ namespace JavaCompiler
             }
 
             var scanner = new Scanner(path);
+            var symTab = new SymbolTable(Globals.PrimeNo);
 
-            var parser = new Parser(scanner);
+            var parser = new Parser(scanner, symTab);
             scanner.GetNextToken();
             parser.Prog();
+            symTab.WriteTable(0);
         }
     }
 }
