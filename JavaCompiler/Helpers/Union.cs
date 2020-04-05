@@ -1,98 +1,28 @@
 using System;
-using System.Diagnostics;
+using System.Diagnostics.Tracing;
 
 namespace JavaCompiler
 {
-    public class UnionBase
+    public class Union<T> where T: struct, IConvertible
     {
-        private readonly object value;
+        public object Value;
+        public T Tag;
 
-        protected UnionBase(object x)
+        public Union(object value, T tag)
         {
-            value = x;
+            Value = value;
+            Tag = tag;
         }
 
-        protected T InternalMatch<T>(params Delegate[] ds)
+        public TOne As<TOne>()
         {
-            var vt = value.GetType();
-            foreach (var d in ds)
-            {
-                var mi = d.Method;
+            var x =this.Tag.GetType();
+            string name = Enum.GetName(typeof(T), Tag);
 
-                // These are always true if InternalMatch is used correctly.
-                Debug.Assert(mi.GetParameters().Length == 1);
-                Debug.Assert(typeof(T).IsAssignableFrom(mi.ReturnType));
-
-                var pt = mi.GetParameters()[0].ParameterType;
-                if (pt.IsAssignableFrom(vt))
-                    return (T) mi.Invoke(null, new[] {value});
-            }
-
-            throw new Exception("No appropriate matching function was provided");
+            if (typeof(TOne).Name == name)
+                return (TOne) Value;
+            
+            throw new ArgumentException($"Argument type of {typeof(TOne).Name} did not match Tag value {name}");
         }
-    }
-
-    public class Union<A, B> : UnionBase
-    {
-        public Union(A a) : base(a)
-        {
-        }
-
-        public Union(B b) : base(b)
-        {
-        }
-
-        protected Union(object x) : base(x)
-        {
-        }
-
-        public T Match<T>(Func<A, T> fa, Func<B, T> fb) => InternalMatch<T>(fa, fb);
-    }
-
-    public class Union<A, B, C> : UnionBase
-    {
-        public Union(A a) : base(a)
-        {
-        }
-
-        public Union(B b) : base(b)
-        {
-        }
-
-        public Union(C c) : base(c)
-        {
-        }
-
-        protected Union(object x) : base(x)
-        {
-        }
-
-        public T Match<T>(Func<A, T> fa, Func<B, T> fb, Func<C, T> fc) => InternalMatch<T>(fa, fb, fc);
-    }
-
-    public class Union<A, B, C, D> : UnionBase
-    {
-        public Union(A a) : base(a)
-        {
-        }
-
-        public Union(B b) : base(b)
-        {
-        }
-
-        public Union(C c) : base(c)
-        {
-        }
-
-        public Union(D d) : base(d)
-        {
-        }
-
-        protected Union(object x) : base(x)
-        {
-        }
-
-        public T Match<T>(Func<A, T> fa, Func<B, T> fb, Func<C, T> fc, Func<D, T> fd) =>
-            InternalMatch<T>(fa, fb, fc, fd);
     }
 }

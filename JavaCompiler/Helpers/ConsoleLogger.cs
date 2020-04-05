@@ -51,7 +51,11 @@ namespace JavaCompiler
         {
             Log("File was successfully parsed!", MessageType.Happy);
         }
-
+        public static void DuplicateLexeme(string lex, in int depth)
+        {
+            Log($"Duplicate token {lex} at depth {depth}", MessageType.Sad);
+        }
+        
         private enum MessageType
         {
             Happy,

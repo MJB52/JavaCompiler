@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using FunctionalSharp.DiscriminatedUnions;
+using System.Linq;
 using JavaCompiler.Entry_Types;
 
 namespace JavaCompiler
@@ -23,16 +23,30 @@ namespace JavaCompiler
             for (var i = 0; i < _tableSize; i++) _table[i] = new LinkedList<TableNode>();
         }
 
-        public void Insert(string lex, Tokens token, int depth)
+        public void Insert(string lex, Tokens token, int depth, EntryType type)
         {
-            var node = CreateVarNode(lex, token, depth);
-            /* need to find a way to differentiate to get the right TableNode
-            // var node = CreateClassNode(lex, token, depth);
-            // var node = CreateFunctionNode(lex, token, depth);
-            // var node = CreateConstantNode(lex, token, depth);*/
-
+            TableNode node = new TableNode
+            {
+                Token = token,
+                Depth = depth,
+                Lexeme = new Lexeme(lex)
+            };
+            //check for duplicates 
             var hash = Hash(lex);
+            CheckForDupes(hash, lex, depth);
             _table[(int) hash].AddLast(node);
+        }
+
+        private void CheckForDupes(uint hash, string lex, int depth)
+        {
+            foreach (var hashLoc in _table[(int)hash])
+            {
+                if (hashLoc.Depth == depth)
+                {
+                    ConsoleLogger.DuplicateLexeme(lex, depth);
+                    throw new ParseErrorException();
+                }
+            }
         }
 
         /// <summary>
@@ -48,7 +62,7 @@ namespace JavaCompiler
             foreach (var hashLoc in _table)
                 if (hashLoc.Count > 0)
                     foreach (var item in hashLoc)
-                        if (item.Lexeme.Value == lex)
+                        if (item.Lexeme.Value == lex && item.Depth == Globals.Depth)
                             return item;
 
             return null;
@@ -58,9 +72,16 @@ namespace JavaCompiler
         {
             foreach (var hashLoc in _table)
                 if (hashLoc.Count > 0)
-                    foreach (var item in hashLoc)
-                        if (item.Depth == depth)
-                            hashLoc.Remove(item); //bad should not modify collection in a foreach buuuuuttt....
+                {
+                    var node = hashLoc.First;
+                    while (node != null)
+                    {
+                        var nextNode = node.Next;
+                        if (node.Value.Depth == depth)
+                            hashLoc.Remove(node);
+                        node = nextNode;
+                    }
+                }
         }
 
         public void WriteTable(int depth)
@@ -69,9 +90,46 @@ namespace JavaCompiler
                 if (hashLoc.Count > 0)
                     foreach (var item in hashLoc)
                     {
-                        Console.Write(item.Lexeme.Value + ", " + Enum.GetName(typeof(Tokens), item.Token) + " at " +
-                                      item.Depth + ". ");
-                        Print(item.TypeOfEntry);
+                        if (item.Depth != depth)
+                            continue;
+                        
+                        switch (item.TypeOfEntry.Tag)
+                        {
+                            case EntryType.ClassType:
+                                var classDetails = item.TypeOfEntry.As<ClassType>();
+                                Console.WriteLine($"Class {item.Lexeme.Value} at depth {item.Depth}");
+                                Console.WriteLine($"Size: {classDetails.Size}");
+                                Console.Write("Method Names: ");
+                                classDetails.MethodNames.ToList().ForEach(x => Console.Write($"{x} "));
+                                Console.WriteLine();
+                                Console.Write("Variable Names: ");
+                                classDetails.VariableNames.ToList().ForEach(x => Console.Write($"{x} "));
+                                Console.WriteLine();
+                                Console.WriteLine();
+                                break;
+                            case EntryType.ConstantType:
+                                var constDetails = item.TypeOfEntry.As<ConstantType>();
+                                Console.WriteLine($"Constant {item.Lexeme.Value} at depth {item.Depth}");
+                                Console.WriteLine();
+                                break;
+                            case EntryType.FunctionType:
+                                var functionDetails = item.TypeOfEntry.As<FunctionType>();
+                                Console.WriteLine($"Function {item.Lexeme.Value} at depth {item.Depth}");
+                                Console.WriteLine($"Total size of method: {functionDetails.TotalSize}");
+                                Console.Write("Parameter Types: ");
+                                functionDetails.ParamList.ToList().ForEach(x => Console.Write($"{Enum.GetName(typeof(TypeOfVariable), x.TypeOfParameter)} "));
+                                Console.WriteLine();
+                                Console.WriteLine();
+                                break;
+                            case EntryType.VarType:
+                                var varDetails = item.TypeOfEntry.As<VarType>();
+                                Console.WriteLine($"Var {item.Lexeme.Value} at depth {item.Depth} is type: {Enum.GetName(typeof(TypeOfVariable), varDetails.TypeOfVariable)}");
+                                Console.WriteLine($"Offset: {varDetails.Offset} | Size: {varDetails.Size}");
+                                Console.WriteLine();
+                                break;
+                            default:
+                                break;
+                        }
                     }
         }
 
@@ -91,16 +149,6 @@ namespace JavaCompiler
             return hash % _tableSize;
         }
 
-        private void Print(DiscriminatedUnion<ConstantType, FunctionType, VarType, ClassType> union)
-        {
-            var text = union.Match(
-                c => "This is an ConstantType ",
-                f => "This is a FunctionType ",
-                v => "This is a VarType",
-                c => "This is a ClassType ");
-            Console.WriteLine(text);
-        }
-
         /// <summary>
         ///     All of these Node Creation methods will return a TableNode with the correct "Type" assigned in the TypeOfEntry
         ///     union. They could probably all be consolidated into one method but i can do that in the future
@@ -113,12 +161,12 @@ namespace JavaCompiler
         {
             var type = new ConstantType
             {
-                Type = new DiscriminatedUnion<int, float>(5.5F), TypeOfConstant = TypeOfVariable.FloatType, Offset = 6
+                Offset = 0
             };
 
             return new TableNode
             {
-                TypeOfEntry = new DiscriminatedUnion<ConstantType, FunctionType, VarType, ClassType>(type),
+                TypeOfEntry = new Union<EntryType>(type, EntryType.ConstantType),
                 Token = token,
                 Depth = depth,
                 Lexeme = new Lexeme(lex)
@@ -137,17 +185,15 @@ namespace JavaCompiler
         {
             var type = new FunctionType
             {
-                ParamList =
-                {
-                    Next = new ParameterNode(), TypeOfParameter = TypeOfVariable.IntType,
-                    PassMode = ParameterPassMode.Value
-                },
-                NumberOfParameters = 1
+                ParamList = new LinkedList<ParameterNode>(),
+                NumberOfParameters = 0,
+                SizeOfLocal = 0,
+                TotalSize = 0
             };
 
             return new TableNode
             {
-                TypeOfEntry = new DiscriminatedUnion<ConstantType, FunctionType, VarType, ClassType>(type),
+                TypeOfEntry = new Union<EntryType>(type, EntryType.FunctionType),
                 Token = token,
                 Depth = depth,
                 Lexeme = new Lexeme(lex)
@@ -166,12 +212,13 @@ namespace JavaCompiler
         {
             var type = new VarType
             {
-                TypeOfVariable = TypeOfVariable.FloatType, Offset = 6
+                Offset = 0,
+                Size = 0,
             };
 
             return new TableNode
             {
-                TypeOfEntry = new DiscriminatedUnion<ConstantType, FunctionType, VarType, ClassType>(type),
+                TypeOfEntry = new Union<EntryType>(type, EntryType.VarType),
                 Token = token,
                 Depth = depth,
                 Lexeme = new Lexeme(lex)
@@ -190,12 +237,14 @@ namespace JavaCompiler
         {
             var type = new ClassType
             {
-                Size = 4, VariableNames = new LinkedList<string>(), MethodNames = new LinkedList<string>()
+                Size = 0,
+                VariableNames = new LinkedList<string>(),
+                MethodNames = new LinkedList<string>()
             };
 
             return new TableNode
             {
-                TypeOfEntry = new DiscriminatedUnion<ConstantType, FunctionType, VarType, ClassType>(type),
+                TypeOfEntry = new Union<EntryType>(type, EntryType.ClassType),
                 Token = token,
                 Depth = depth,
                 Lexeme = new Lexeme(lex)

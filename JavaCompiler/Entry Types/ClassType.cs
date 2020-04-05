@@ -2,10 +2,16 @@ using System.Collections.Generic;
 
 namespace JavaCompiler.Entry_Types
 {
-    public struct ClassType
+    public class ClassType
     {
         public LinkedList<string> MethodNames;
         public int Size;
         public LinkedList<string> VariableNames;
+
+        public ClassType()
+        {
+            MethodNames = new LinkedList<string>();
+            VariableNames = new LinkedList<string>();
+        }
     }
 }

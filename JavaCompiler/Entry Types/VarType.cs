@@ -1,6 +1,6 @@
 namespace JavaCompiler.Entry_Types
 {
-    public struct VarType
+    public class VarType
     {
         public int Offset;
         public int Size;

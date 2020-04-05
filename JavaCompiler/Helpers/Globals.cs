@@ -1,4 +1,6 @@
-﻿namespace JavaCompiler
+﻿using JavaCompiler.Entry_Types;
+
+namespace JavaCompiler
 {
     public static class Globals
     {
@@ -9,15 +11,29 @@
         public static Tokens Token { get; set; }
         public static int Depth { get; set; } = 0;
         public static int LineNo { get; set; } = 1;
+        
+        public static ClassType? ClassT = null;
+        public static ConstantType? ConstT = null;
+        public static FunctionType? FuncT = null;
+        public static VarType? VarT = null;
+        public static TypeOfVariable TypeOfVar { get; set; }
+        public static int Offset { get; set; } = 0;
     }
 
     public enum TypeOfVariable
     {
-        CharType,
+        VoidType,
+        BoolType,
         IntType,
-        FloatType
     }
 
+    public enum EntryType
+    {
+        ClassType,
+        ConstantType,
+        FunctionType,
+        VarType,
+    }
     public enum ParameterPassMode
     {
         Value,
@@ -65,6 +81,6 @@
         RelOpT,
         EofT,
         UnknownT,
-        LiteralT
+        LiteralT,
     }
 }

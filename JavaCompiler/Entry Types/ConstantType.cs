@@ -1,11 +1,9 @@
-using FunctionalSharp.DiscriminatedUnions;
-
 namespace JavaCompiler.Entry_Types
 {
-    public struct ConstantType
+    public class ConstantType
     {
         public int Offset;
-        public DiscriminatedUnion<int, float> Type;
+        public object Value;
         public TypeOfVariable TypeOfConstant; //int or float constant
     }
 }

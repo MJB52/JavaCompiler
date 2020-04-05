@@ -1,4 +1,5 @@
 using System;
+using JavaCompiler.Entry_Types;
 
 namespace JavaCompiler
 {
@@ -19,8 +20,9 @@ namespace JavaCompiler
             {
                 MoreClasses();
                 MainClass();
+                _symTab.WriteTable(Globals.Depth);
                 if (Globals.Token == Tokens.EofT)
-                    ConsoleLogger.SuccessfulParse();
+                    ; //ConsoleLogger.SuccessfulParse();
                 else
                     ConsoleLogger.ParseError(Tokens.EofT, Globals.Token, Globals.LineNo);
             }
@@ -33,22 +35,31 @@ namespace JavaCompiler
         {
             Match(Tokens.FinalT);
             Match(Tokens.ClassT);
+            _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.ClassType);
+            var type = _symTab.Lookup(Globals.Lexeme);
+            type.TypeOfEntry = new Union<EntryType>(new ClassType(), EntryType.ClassType);
             Match(Tokens.IdT);
+            //Globals.Depth++;
             Match(Tokens.LBraceT);
             Match(Tokens.PublicT);
             Match(Tokens.StaticT);
             Match(Tokens.VoidT);
+            //_symTab.Insert("Main", Tokens.IdT, Globals.Depth, EntryType.FunctionType);
             Match(Tokens.MainT);
+            //Globals.Depth++;
             Match(Tokens.LParenT);
             Match(Tokens.StringT);
             Match(Tokens.LBrackT);
             Match(Tokens.RBrackT);
+           // _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.VarType);
             Match(Tokens.IdT);
             Match(Tokens.RParenT);
+            //Globals.Depth--;
             Match(Tokens.LBraceT);
             SeqOfStatements();
             Match(Tokens.RBraceT);
             Match(Tokens.RBraceT);
+            //Globals.Depth--;
         }
 
         private void MoreClasses()
@@ -62,11 +73,17 @@ namespace JavaCompiler
         {
             if (Globals.Token != Tokens.ClassT)
                 return;
+            
+            Globals.ClassT = new ClassType();
             Match(Tokens.ClassT);
+            var lex = Globals.Lexeme;
+            _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.ClassType);
             Match(Tokens.IdT);
+            Globals.Depth++;
             if (Globals.Token == Tokens.ExtendsT)
             {
                 Match(Tokens.ExtendsT);
+                //_symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, );
                 Match(Tokens.IdT);
             }
 
@@ -74,18 +91,42 @@ namespace JavaCompiler
             VarDecl();
             MethodDecl();
             Match(Tokens.RBraceT);
+            _symTab.WriteTable(Globals.Depth);
+            _symTab.DeleteDepth(Globals.Depth);
+            Globals.Depth--;
+            Globals.Offset = 0;
+            var temp = _symTab.Lookup(lex);
+            temp.TypeOfEntry = new Union<EntryType>(Globals.ClassT, EntryType.ClassType);
         }
 
         private void VarDecl()
         {
+            //if at depth 2 need to add to function type
+            Globals.VarT = new VarType();
             if (Globals.Token == Tokens.FinalT)
             {
                 Match(Tokens.FinalT);
                 Type();
+                Globals.VarT.Size += (int) Globals.TypeOfVar;
+                Globals.VarT.TypeOfVariable = Globals.TypeOfVar;
+                Globals.VarT.Offset = Globals.Offset;
+                Globals.Offset += (int) Globals.TypeOfVar;
+                Globals.ClassT.VariableNames.AddLast(Globals.Lexeme);
+                Globals.ClassT.Size += (int)Globals.TypeOfVar;
+                if (Globals.Depth == 2)
+                {
+                    Globals.FuncT.TotalSize += (int) Globals.TypeOfVar;
+                    Globals.FuncT.SizeOfLocal += (int) Globals.TypeOfVar;
+                }
+
+                var lex = Globals.Lexeme;
+                _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.VarType);
                 Match(Tokens.IdT);
-                Match(Tokens.RelOpT);
+                Match(Tokens.AssignOpT);
                 Match(Tokens.NumT);
                 Match(Tokens.SemiT);
+                var temp = _symTab.Lookup(lex);
+                temp.TypeOfEntry = new Union<EntryType>(Globals.VarT, EntryType.VarType);
                 VarDecl();
             }
             else if (Globals.Token.IsDataType())
@@ -99,15 +140,50 @@ namespace JavaCompiler
 
         private void IdentifierList()
         {
+            //if at depth 2 need to add to function type
+            Globals.VarT = new VarType();
             if (Globals.Token == Tokens.IdT)
             {
+                Globals.ClassT.Size += (int)Globals.TypeOfVar;
+                Globals.ClassT.VariableNames.AddLast(Globals.Lexeme);
+                Globals.VarT.Size += (int) Globals.TypeOfVar;
+                Globals.VarT.Offset = Globals.Offset;
+                Globals.VarT.TypeOfVariable = Globals.TypeOfVar;
+                Globals.Offset += (int) Globals.TypeOfVar;
+                if (Globals.Depth == 2)
+                {
+                    Globals.FuncT.TotalSize += (int) Globals.TypeOfVar;
+                    Globals.FuncT.SizeOfLocal += (int) Globals.TypeOfVar;
+                }
+
+                var lex = Globals.Lexeme;
+                _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.VarType);
                 Match(Tokens.IdT);
+                
+                var temp = _symTab.Lookup(lex);
+                temp.TypeOfEntry = new Union<EntryType>(Globals.VarT, EntryType.VarType);
                 IdentifierList();
             }
             else if (Globals.Token == Tokens.CommaT)
             {
                 Match(Tokens.CommaT);
+                Globals.ClassT.Size += (int)Globals.TypeOfVar;
+                Globals.ClassT.VariableNames.AddLast(Globals.Lexeme);
+                Globals.VarT.Size += (int) Globals.TypeOfVar;
+                Globals.VarT.Offset = Globals.Offset;
+                Globals.VarT.TypeOfVariable = Globals.TypeOfVar;
+                Globals.Offset += (int) Globals.TypeOfVar;
+                if (Globals.Depth == 2)
+                {
+                    Globals.FuncT.TotalSize += (int) Globals.TypeOfVar;
+                    Globals.FuncT.SizeOfLocal += (int) Globals.TypeOfVar;
+                }
+
+                var lex = Globals.Lexeme;
+                _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.VarType);
                 Match(Tokens.IdT);
+                var temp = _symTab.Lookup(lex);
+                temp.TypeOfEntry = new Union<EntryType>(Globals.VarT, EntryType.VarType);
                 IdentifierList();
             }
         }
@@ -115,11 +191,20 @@ namespace JavaCompiler
         private void Type()
         {
             if (Globals.Token == Tokens.IntT)
+            {
                 Match(Tokens.IntT);
+                Globals.TypeOfVar = TypeOfVariable.IntType;
+            }
             else if (Globals.Token == Tokens.BooleanT)
+            {
                 Match(Tokens.BooleanT);
+                Globals.TypeOfVar = TypeOfVariable.BoolType;
+            }
             else if (Globals.Token == Tokens.VoidT)
+            {
                 Match(Tokens.VoidT);
+                Globals.TypeOfVar = TypeOfVariable.VoidType;
+            }
             else
                 return;
         }
@@ -129,11 +214,16 @@ namespace JavaCompiler
             if (Globals.Token != Tokens.PublicT)
                 return;
 
+            Globals.FuncT = new FunctionType();
             Match(Tokens.PublicT);
             Type();
+            var lex = Globals.Lexeme;
+            Globals.ClassT.MethodNames.AddLast(Globals.Lexeme);
+            _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.FunctionType);
             Match(Tokens.IdT);
+            Globals.Depth++;
             Match(Tokens.LParenT);
-            FormalList();
+            FormalList();//add params
             Match(Tokens.RParenT);
             Match(Tokens.LBraceT);
             VarDecl();
@@ -142,15 +232,36 @@ namespace JavaCompiler
             Expr();
             Match(Tokens.SemiT);
             Match(Tokens.RBraceT);
+            Globals.Offset = 0;
+            _symTab.WriteTable(Globals.Depth);
+            _symTab.DeleteDepth(Globals.Depth);
+            Globals.Depth--;
+            Globals.Offset = 0;
+            var temp = _symTab.Lookup(lex);
+            temp.TypeOfEntry = new Union<EntryType>(Globals.FuncT, EntryType.FunctionType);
+            MethodDecl();
         }
 
         private void FormalList()
         {
             if (!Globals.Token.IsDataType())
                 return;
-
+            Globals.VarT = new VarType();
+            var paramNode = new ParameterNode();
             Type();
+            paramNode.TypeOfParameter = Globals.TypeOfVar;
+            //paramNode.PassMode
+            Globals.VarT.Size += (int) Globals.TypeOfVar;
+            Globals.VarT.Offset = Globals.Offset;
+            Globals.VarT.TypeOfVariable = Globals.TypeOfVar;
+            Globals.Offset += (int) Globals.TypeOfVar;
+            Globals.FuncT.TotalSize += (int) Globals.TypeOfVar;
+            Globals.FuncT.ParamList.AddLast(paramNode);
+            var lex = Globals.Lexeme;
+            _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.VarType);
             Match(Tokens.IdT);
+            var temp = _symTab.Lookup(lex);
+            temp.TypeOfEntry = new Union<EntryType>(Globals.VarT, EntryType.VarType);
             FormalRest();
         }
 
@@ -158,10 +269,24 @@ namespace JavaCompiler
         {
             if (Globals.Token != Tokens.CommaT)
                 return;
-
+            
+            Globals.VarT = new VarType();
+            var paramNode = new ParameterNode();
             Match(Tokens.CommaT);
             Type();
+            paramNode.TypeOfParameter = Globals.TypeOfVar;
+            //paramNode.PassMode
+            Globals.VarT.Size += (int) Globals.TypeOfVar;
+            Globals.VarT.Offset = Globals.Offset;
+            Globals.VarT.TypeOfVariable = Globals.TypeOfVar;
+            Globals.Offset += (int) Globals.TypeOfVar;
+            Globals.FuncT.TotalSize += (int) Globals.TypeOfVar;
+            Globals.FuncT.ParamList.AddLast(paramNode);
+            var lex = Globals.Lexeme;
+            _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.VarType);
             Match(Tokens.IdT);
+            var temp = _symTab.Lookup(lex);
+            temp.TypeOfEntry = new Union<EntryType>(Globals.VarT, EntryType.VarType);
             FormalRest();
         }
 

@@ -14,6 +14,7 @@ namespace JavaCompiler
         {
             var mappedFile = MemoryMappedFile.CreateFromFile(fileName);
             var mmStream = mappedFile.CreateViewStream();
+            
             _streamReader = new StreamReader(mmStream, Encoding.ASCII);
         }
 
