@@ -61,5 +61,10 @@ namespace JavaCompiler
             Happy,
             Sad
         }
+
+        public static void UndeclaredVariable(string lexeme, in int lineNo)
+        {
+            Log($"Use of undeclared lexeme {lexeme} on Line No: {lineNo}. ", MessageType.Sad);
+        }
     }
 }

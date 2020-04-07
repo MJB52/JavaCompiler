@@ -82,5 +82,7 @@ namespace JavaCompiler
         EofT,
         UnknownT,
         LiteralT,
+        NotT,
+        SignOpT,
     }
 }

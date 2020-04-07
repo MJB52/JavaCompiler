@@ -285,6 +285,9 @@ namespace JavaCompiler
                 case ";":
                     Globals.Token = Tokens.SemiT;
                     break;
+                case "!":
+                    Globals.Token = Tokens.NotT;
+                    break;
                 case "\"":
                     Globals.IsLiteral = true;
                     Globals.Token = Tokens.QuoteT;

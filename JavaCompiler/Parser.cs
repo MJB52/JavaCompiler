@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using JavaCompiler.Entry_Types;
 
 namespace JavaCompiler
@@ -292,10 +293,120 @@ namespace JavaCompiler
 
         private void SeqOfStatements()
         {
+            if (Globals.Token != Tokens.IdT) // will need to add more here when IOStat gets defined
+                return;
+            
+            Statement();
+            Match(Tokens.SemiT);
+            SeqOfStatements();
+        }
+
+        private void Statement()
+        {
+            AssignStat();
+            IOStat();
+        }
+
+        private void AssignStat()
+        {
+            if (Globals.Token != Tokens.IdT)
+                return;
+
+            if (_symTab.Lookup(Globals.Lexeme) == null && _symTab.Lookup(Globals.Lexeme, (Globals.Depth - 1)) == null)
+            {
+                ConsoleLogger.UndeclaredVariable(Globals.Lexeme, Globals.LineNo);
+                throw new ParseErrorException();
+            }
+            
+            Match(Tokens.IdT);
+            Match(Tokens.AssignOpT);
+            Expr();
+        }
+
+        private void IOStat()
+        {
         }
 
         private void Expr()
         {
+            Relation();
+        }
+
+        private void Relation()
+        {
+            SimpleExpr();
+        }
+
+        private void SimpleExpr()
+        {
+            Term();
+            MoreTerm();
+        }
+
+        private void MoreTerm()
+        {
+            if (Globals.Token != Tokens.AddOpT)
+                return;
+            Match(Tokens.AddOpT);
+            Term();
+            MoreTerm();
+        }
+
+        private void Term()
+        {
+            Factor();
+            MoreFactor();
+        }
+
+        private void Factor()
+        {
+            if (Globals.Token == Tokens.IdT)
+            {
+                if (_symTab.Lookup(Globals.Lexeme) == null && _symTab.Lookup(Globals.Lexeme, (Globals.Depth - 1)) == null)
+                {
+                    ConsoleLogger.UndeclaredVariable(Globals.Lexeme, Globals.LineNo);
+                    throw new ParseErrorException();
+                }
+                
+                Match(Tokens.IdT);
+            }
+
+            if (Globals.Token == Tokens.NumT)
+                Match(Tokens.NumT);
+            
+            if (Globals.Token == Tokens.LParenT)
+            {
+                Match(Tokens.LParenT);
+                Expr();
+                Match(Tokens.RParenT);
+            }
+
+            if (Globals.Token == Tokens.NotT)
+            {
+                Match(Tokens.NotT);
+                Factor();
+            }
+
+            if (Globals.Token == Tokens.SignOpT)
+            {
+                Match(Tokens.SignOpT);
+                Factor();
+            }
+
+            if (Globals.Token == Tokens.TrueT)
+                Match(Tokens.TrueT);
+            
+            if (Globals.Token == Tokens.FalseT)
+                Match(Tokens.FalseT);
+        }
+
+        private void MoreFactor()
+        {
+            if (Globals.Token != Tokens.MulOpT)
+                return;
+            Match(Tokens.MulOpT);
+            Factor();
+            MoreFactor();
         }
 
         private void Match(Tokens token)

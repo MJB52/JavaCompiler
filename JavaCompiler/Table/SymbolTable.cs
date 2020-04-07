@@ -53,16 +53,22 @@ namespace JavaCompiler
         ///     Returns the node that matches the lexeme
         /// </summary>
         /// <param name="lex"></param>
+        /// <param name="depth"></param>
         /// <returns>
         ///     TableNode? which means it's signature makes it known to the caller that it can return null thus
         ///     should do their own checking for null
         /// </returns>
-        public TableNode? Lookup(string lex)
+        public TableNode? Lookup(string lex, int depth = -1)
         {
+            if (depth == -1)
+            {
+                depth = Globals.Depth;
+            }
+            
             foreach (var hashLoc in _table)
                 if (hashLoc.Count > 0)
                     foreach (var item in hashLoc)
-                        if (item.Lexeme.Value == lex && item.Depth == Globals.Depth)
+                        if (item.Lexeme.Value == lex && item.Depth == depth)
                             return item;
 
             return null;
