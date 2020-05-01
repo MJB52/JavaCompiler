@@ -8,11 +8,13 @@ namespace JavaCompiler
     {
         private readonly IScanner _scanner;
         private readonly ISymbolTable _symTab;
+        private readonly IPrinter _printer;
 
-        public Parser(IScanner scanner, ISymbolTable symTab)
+        public Parser(IScanner scanner, ISymbolTable symTab, IPrinter printer)
         {
             _scanner = scanner ?? throw new ArgumentNullException(nameof(scanner));
             _symTab = symTab ?? throw new ArgumentNullException(nameof(symTab));
+            _printer = printer ?? throw new ArgumentNullException(nameof(printer));
         }
 
         public void Prog()
