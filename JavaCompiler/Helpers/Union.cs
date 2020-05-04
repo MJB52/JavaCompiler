@@ -16,7 +16,6 @@ namespace JavaCompiler
 
         public TOne As<TOne>()
         {
-            var x =this.Tag.GetType();
             string name = Enum.GetName(typeof(T), Tag);
 
             if (typeof(TOne).Name == name)

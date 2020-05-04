@@ -19,19 +19,21 @@ namespace JavaCompiler
                  Environment.Exit(-1);
             }
 
-            var path = Directory.GetCurrentDirectory();
-            path = Path.Combine(path, args[0]);
+            var cwd = Directory.GetCurrentDirectory();
+            var inputFilePath = Path.Combine(cwd, args[0]);
 
-            if (!File.Exists(path))
+            if (!File.Exists(inputFilePath))
             {
                  ConsoleLogger.FileNotFound(args[0]);
                  Environment.Exit(-1);
             }
+            var tacFile = args[0].Substring(0, args[0].LastIndexOf('.')) + ".tac";
+            var tacPath = Path.Combine(cwd, tacFile);
 
-            var scanner = new Scanner(path);
+            var scanner = new Scanner(inputFilePath);
             var symTab = new SymbolTable(Globals.PrimeNo);
-
-            var parser = new Parser(scanner, symTab);
+            var printer = new Printer(tacPath);
+            var parser = new Parser(scanner, symTab, printer);
             scanner.GetNextToken();
             parser.Prog();
         }

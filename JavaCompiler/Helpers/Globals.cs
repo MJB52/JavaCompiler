@@ -18,6 +18,7 @@ namespace JavaCompiler
         public static VarType? VarT = null;
         public static TypeOfVariable TypeOfVar { get; set; }
         public static int Offset { get; set; } = 0;
+        public static string TempOffsetName { get; set; } = string.Empty;
     }
 
     public enum TypeOfVariable

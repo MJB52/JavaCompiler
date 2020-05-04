@@ -58,20 +58,9 @@ namespace JavaCompiler
         ///     TableNode? which means it's signature makes it known to the caller that it can return null thus
         ///     should do their own checking for null
         /// </returns>
-        public TableNode? Lookup(string lex, int depth = -1)
+        public TableNode? Lookup(string lex)
         {
-            if (depth == -1)
-            {
-                depth = Globals.Depth;
-            }
-            
-            foreach (var hashLoc in _table)
-                if (hashLoc.Count > 0)
-                    foreach (var item in hashLoc)
-                        if (item.Lexeme.Value == lex && item.Depth == depth)
-                            return item;
-
-            return null;
+            return _table[Hash(lex)].FirstOrDefault(entry => entry.Lexeme.Value == lex);
         }
 
         public void DeleteDepth(int depth)
@@ -192,7 +181,7 @@ namespace JavaCompiler
             var type = new FunctionType
             {
                 ParamList = new LinkedList<ParameterNode>(),
-                NumberOfParameters = 0,
+                ParamaterOffsetSize = 0,
                 SizeOfLocal = 0,
                 TotalSize = 0
             };

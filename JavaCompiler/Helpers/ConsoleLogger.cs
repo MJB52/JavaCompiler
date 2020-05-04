@@ -66,5 +66,10 @@ namespace JavaCompiler
         {
             Log($"Use of undeclared lexeme {lexeme} on Line No: {lineNo}. ", MessageType.Sad);
         }
+
+        internal static void UnknownFunction(string className, string method, int lineNo)
+        {
+            Log($"Use of undefined method {method} in class {className} on line no: {lineNo}.", MessageType.Sad);
+        }
     }
 }

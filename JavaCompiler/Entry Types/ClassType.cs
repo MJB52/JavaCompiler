@@ -5,7 +5,7 @@ namespace JavaCompiler.Entry_Types
     public class ClassType
     {
         public LinkedList<string> MethodNames;
-        public int Size;
+        public int Size = 0;
         public LinkedList<string> VariableNames;
 
         public ClassType()

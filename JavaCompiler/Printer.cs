@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
-
 namespace JavaCompiler
 {
     public class Printer : IPrinter
     {
-        public string FileName { get; set; }
+        public string FileName { get; private set; }
+        public int Offset { get; set; } = 2;
+        private List<string> _tacData = new List<string>();
 
         public Printer(string fileName = "")
         {
@@ -16,26 +19,26 @@ namespace JavaCompiler
             }
 
             FileName = fileName;
+            Console.WriteLine(FileName);
         }
 
-        public void PrintProg()
+        public void PrintLine(string line)
         {
-            
+            _tacData.Add(line);
+            Console.WriteLine(line);
         }
 
-        public void PrintLine()
+        public void EOFEncountered()
         {
-
-        }
-        public void FinishPrint()
-        {
-
+            File.WriteAllLines(FileName, _tacData);
+            Console.WriteLine($"TAC file generated at {FileName}");
         }
 
-        public void GenerateExpression(bool printLine = false)
+        public string GenerateTempVar(TypeOfVariable type)
         {
-            if (printLine)
-                PrintLine(); //might have to do some logic before this 
+            string name = $"_bp-{Globals.Offset + Offset}";
+            Offset += (int)type;
+            return name;
         }
     }
 }

@@ -96,6 +96,8 @@ namespace JavaCompiler
                     Globals.Lexeme += ch;
                     letterCount++;
                     ch = (char) _streamReader.Peek();
+                    if (ch == '.' && Globals.Lexeme != "System")
+                        break;
                 }
             }
             else
@@ -269,8 +271,10 @@ namespace JavaCompiler
                     Globals.Token = Tokens.AssignOpT;
                     break;
                 case "+":
-                case "-":
                     Globals.Token = Tokens.AddOpT;
+                    break;
+                case "-":
+                    Globals.Token = Tokens.SignOpT;
                     break;
                 case "/":
                 case "*":
