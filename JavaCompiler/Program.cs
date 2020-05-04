@@ -32,7 +32,7 @@ namespace JavaCompiler
 
             var scanner = new Scanner(inputFilePath);
             var symTab = new SymbolTable(Globals.PrimeNo);
-            var printer = new Printer(tacPath);
+            var printer = new TACWriter(tacPath);
             var parser = new Parser(scanner, symTab, printer);
             scanner.GetNextToken();
             parser.Prog();

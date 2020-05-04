@@ -1,5 +1,3 @@
-using JavaCompiler.Entry_Types;
-
 namespace JavaCompiler
 {
     public class TableNode

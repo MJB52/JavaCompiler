@@ -4,7 +4,7 @@ using System.Text;
 
 namespace JavaCompiler
 {
-    public interface IPrinter
+    public interface ITACWriter
     {
         public string FileName { get; }
         public int Offset { get; set; }

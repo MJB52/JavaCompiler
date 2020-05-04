@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JavaCompiler.Entry_Types;
 
 namespace JavaCompiler
 {

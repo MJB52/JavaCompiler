@@ -1,4 +1,4 @@
-namespace JavaCompiler.Entry_Types
+namespace JavaCompiler
 {
     public class ConstantType
     {

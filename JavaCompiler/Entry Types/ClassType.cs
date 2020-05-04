@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace JavaCompiler.Entry_Types
+namespace JavaCompiler
 {
     public class ClassType
     {

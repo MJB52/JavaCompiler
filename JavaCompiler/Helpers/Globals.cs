@@ -1,6 +1,4 @@
-﻿using JavaCompiler.Entry_Types;
-
-namespace JavaCompiler
+﻿namespace JavaCompiler
 {
     public static class Globals
     {
@@ -85,5 +83,8 @@ namespace JavaCompiler
         LiteralT,
         NotT,
         SignOpT,
+        WriteT,
+        WritelnT, 
+        ReadT
     }
 }

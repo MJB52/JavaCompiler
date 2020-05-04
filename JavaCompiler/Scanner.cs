@@ -174,6 +174,15 @@ namespace JavaCompiler
                     case "new":
                         Globals.Token = Tokens.NewT;
                         break;
+                    case "write":
+                        Globals.Token = Tokens.WriteT;
+                        break;
+                    case "writeln":
+                        Globals.Token = Tokens.WritelnT;
+                        break;
+                    case "read":
+                        Globals.Token = Tokens.ReadT;
+                        break;
                     default:
                         if (Globals.IsLiteral)
                         {
