@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using System.Data;
-using JavaCompiler.Entry_Types;
 
 namespace JavaCompiler
 {
@@ -8,13 +7,15 @@ namespace JavaCompiler
     {
         private readonly IScanner _scanner;
         private readonly ISymbolTable _symTab;
-        private readonly IPrinter _printer;
+        private readonly ITACWriter _tacWriter;
+        private readonly IASMWriter _asmWriter;
 
-        public Parser(IScanner scanner, ISymbolTable symTab, IPrinter printer)
+        public Parser(IScanner scanner, ISymbolTable symTab, ITACWriter printer, IASMWriter writer)
         {
             _scanner = scanner ?? throw new ArgumentNullException(nameof(scanner));
             _symTab = symTab ?? throw new ArgumentNullException(nameof(symTab));
-            _printer = printer ?? throw new ArgumentNullException(nameof(printer));
+            _tacWriter = printer ?? throw new ArgumentNullException(nameof(printer));
+            _asmWriter = writer ?? throw new ArgumentNullException(nameof(writer));
         }
 
         public void Prog()
@@ -25,7 +26,7 @@ namespace JavaCompiler
                 MainClass();
 
                 if (Globals.Token == Tokens.EofT)
-                    _printer.EOFEncountered(); //ConsoleLogger.SuccessfulParse();
+                    _tacWriter.EOFEncountered(); //ConsoleLogger.SuccessfulParse();
                 else
                     ConsoleLogger.ParseError(Tokens.EofT, Globals.Token, Globals.LineNo);
             }
@@ -41,7 +42,15 @@ namespace JavaCompiler
             _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.ClassType);
             var type = _symTab.Lookup(Globals.Lexeme);
             type.TypeOfEntry = new Union<EntryType>(new ClassType(), EntryType.ClassType);
-            _printer.PrintLine("proc main");
+            _tacWriter.PrintLine("proc main");
+            _asmWriter.MainProc = "main";
+            _asmWriter.AddFunction(new TableNode
+            {
+                Depth = Globals.Depth,
+                Lexeme = new Lexeme("main"),
+                Token = Tokens.MainT,
+                TypeOfEntry = new Union<EntryType>(new FunctionType(), EntryType.FunctionType)
+            });
             Match(Tokens.IdT);
             //Globals.Depth++;
             Match(Tokens.LBraceT);
@@ -63,7 +72,7 @@ namespace JavaCompiler
             SeqOfStatements();
             Match(Tokens.RBraceT);
             Match(Tokens.RBraceT);
-            _printer.PrintLine("endp main");
+            _tacWriter.PrintLine("endp main");
 
             //Globals.Depth--;
         }
@@ -240,7 +249,7 @@ namespace JavaCompiler
             var lex = Globals.Lexeme;
             Globals.ClassT.MethodNames.AddLast(Globals.Lexeme);
             _symTab.Insert(Globals.Lexeme, Globals.Token, Globals.Depth, EntryType.FunctionType);
-            _printer.PrintLine($"proc {Globals.Lexeme}");
+            _tacWriter.PrintLine($"proc {Globals.Lexeme}");
 
             Match(Tokens.IdT);
             Globals.Depth++;
@@ -248,7 +257,7 @@ namespace JavaCompiler
             Globals.FuncT.ParamaterOffsetSize = 4;
             FormalList();//add params
             Globals.Offset = 2;
-            _printer.Offset = 2;
+            _tacWriter.Offset = 2;
             Match(Tokens.RParenT);
             Match(Tokens.LBraceT);
             VarDecl();
@@ -263,7 +272,8 @@ namespace JavaCompiler
             Globals.Offset = 0;
             var temp = _symTab.Lookup(lex) ?? throw new ParseErrorException();
             temp.TypeOfEntry = new Union<EntryType>(Globals.FuncT, EntryType.FunctionType);
-            _printer.PrintLine($"endp {lex}");
+            _asmWriter.AddFunction(temp);
+            _tacWriter.PrintLine($"endp {lex}");
 
             MethodDecl();
         }
@@ -325,7 +335,7 @@ namespace JavaCompiler
 
         private void SeqOfStatements()
         {
-            if (Globals.Token != Tokens.IdT) // will need to add more here when IOStat gets defined
+            if (Globals.Token != Tokens.IdT && Globals.Token != Tokens.WriteT && Globals.Token != Tokens.WritelnT && Globals.Token != Tokens.ReadT)
                 return;
             
             Statement();
@@ -357,7 +367,7 @@ namespace JavaCompiler
                     Match(Tokens.LParenT);
                     ParamsList();
                     Match(Tokens.RParenT);
-                    _printer.PrintLine($"call {methodName}");
+                    _tacWriter.PrintLine($"call {methodName}");
                 }
                 else
                 {
@@ -370,26 +380,49 @@ namespace JavaCompiler
                 Match(Tokens.IdT);
                 Match(Tokens.AssignOpT);
 
-                Expr();
-                string temp = string.Empty;
-                switch (assign.TypeOfEntry.Tag)
+                var method = _symTab.Lookup(Globals.Lexeme);
+                if (method != null && (method.TypeOfEntry.Tag == EntryType.ClassType))
                 {
-                    case EntryType.ConstantType:
-                        temp = assign.TypeOfEntry.As<ConstantType>().OffsetName;
-                        break;
-                    case EntryType.VarType:
-                        temp = assign.TypeOfEntry.As<VarType>().OffsetName;
-                        break;
-                    default:
-                        //idk should never happen
-                        break;
+                    Match(Tokens.IdT);
+                    Match(Tokens.PeriodT);
+                    string methodName = Globals.Lexeme;
+                    Match(Tokens.IdT);
+                    Match(Tokens.LParenT);
+                    ParamsList();
+                    Match(Tokens.RParenT);
+                    _tacWriter.PrintLine($"call {methodName}");
+                    switch (assign.TypeOfEntry.Tag)
+                    {
+                        case EntryType.ConstantType:
+                            _tacWriter.PrintLine($"{assign.TypeOfEntry.As<ConstantType>().OffsetName} = _ax");
+                            break;
+                        case EntryType.VarType:
+                            _tacWriter.PrintLine($"{assign.TypeOfEntry.As<VarType>().OffsetName} = _ax");
+                            break;
+                        default:
+                            //idk should never happen
+                            break;
+                    }
                 }
-                _printer.PrintLine($"{temp} = {Globals.TempOffsetName}");
+                else
+                {
+                    Expr();
+                    string temp = string.Empty;
+                    switch (assign.TypeOfEntry.Tag)
+                    {
+                        case EntryType.ConstantType:
+                            temp = assign.TypeOfEntry.As<ConstantType>().OffsetName;
+                            break;
+                        case EntryType.VarType:
+                            temp = assign.TypeOfEntry.As<VarType>().OffsetName;
+                            break;
+                        default:
+                            //idk should never happen
+                            break;
+                    }
+                    _tacWriter.PrintLine($"{temp} = {Globals.TempOffsetName}");
+                }
             }
-        }
-
-        private void IOStat()
-        {
         }
 
         private void Expr()
@@ -413,12 +446,12 @@ namespace JavaCompiler
             if (Globals.Token != Tokens.AddOpT)
                 return;
             string line;
-            var temp = _printer.GenerateTempVar(TypeOfVariable.IntType);
+            var temp = _tacWriter.GenerateTempVar(TypeOfVariable.IntType);
             line = $"{temp} = {Globals.TempOffsetName} + ";
             Match(Tokens.AddOpT);
             Term();
             line += Globals.TempOffsetName;
-            _printer.PrintLine(line);
+            _tacWriter.PrintLine(line);
             MoreTerm();
             Globals.TempOffsetName = temp;
         }
@@ -456,8 +489,8 @@ namespace JavaCompiler
 
             if (Globals.Token == Tokens.NumT)
             {
-                var temp = _printer.GenerateTempVar(TypeOfVariable.IntType);
-                _printer.PrintLine(temp + " = " + Globals.Lexeme);
+                var temp = _tacWriter.GenerateTempVar(TypeOfVariable.IntType);
+                _tacWriter.PrintLine(temp + " = " + Globals.Lexeme);
                 Globals.TempOffsetName = temp;
 
                 Match(Tokens.NumT);
@@ -479,26 +512,26 @@ namespace JavaCompiler
 
             if (Globals.Token == Tokens.SignOpT)
             {
-                var temp = _printer.GenerateTempVar(TypeOfVariable.IntType);
+                var temp = _tacWriter.GenerateTempVar(TypeOfVariable.IntType);
                 string line = $"{temp} = 0 - ";
                 Match(Tokens.SignOpT);
                 Factor();
                 line += Globals.TempOffsetName;
-                _printer.PrintLine(line);
+                _tacWriter.PrintLine(line);
                 Globals.TempOffsetName = temp;
             }
 
             if (Globals.Token == Tokens.TrueT)
             {
-                var temp = _printer.GenerateTempVar(TypeOfVariable.BoolType);
-                _printer.PrintLine(temp + "=" + Globals.TempOffsetName);
+                var temp = _tacWriter.GenerateTempVar(TypeOfVariable.BoolType);
+                _tacWriter.PrintLine(temp + "=" + Globals.TempOffsetName);
                 Globals.TempOffsetName = temp;
                 Match(Tokens.TrueT);
             }
             if (Globals.Token == Tokens.FalseT)
             {
-                var temp = _printer.GenerateTempVar(TypeOfVariable.BoolType);
-                _printer.PrintLine(temp + "=" + Globals.TempOffsetName);
+                var temp = _tacWriter.GenerateTempVar(TypeOfVariable.BoolType);
+                _tacWriter.PrintLine(temp + "=" + Globals.TempOffsetName);
                 Globals.TempOffsetName = temp;
                 Match(Tokens.FalseT);
             }
@@ -509,12 +542,12 @@ namespace JavaCompiler
             if (Globals.Token != Tokens.MulOpT)
                 return;
             string line;
-            var temp = _printer.GenerateTempVar(TypeOfVariable.IntType);
+            var temp = _tacWriter.GenerateTempVar(TypeOfVariable.IntType);
             line = $"{temp} = {Globals.TempOffsetName} * ";
             Match(Tokens.MulOpT);
             Factor();
             line += Globals.TempOffsetName;
-            _printer.PrintLine(line);
+            _tacWriter.PrintLine(line);
             MoreFactor();
             Globals.TempOffsetName = temp;
         }
@@ -527,20 +560,20 @@ namespace JavaCompiler
 
                 if (param != null)
                 {
+                    Match(Tokens.IdT);
+                    ParamsRest();
                     switch (param.TypeOfEntry.Tag)
                     {
                         case EntryType.ConstantType:
-                            _printer.PrintLine($"push {param.TypeOfEntry.As<ConstantType>().OffsetName}");
+                            _tacWriter.PrintLine($"push {param.TypeOfEntry.As<ConstantType>().OffsetName}");
                             break;
                         case EntryType.VarType:
-                            _printer.PrintLine($"push {param.TypeOfEntry.As<VarType>().OffsetName}");
+                            _tacWriter.PrintLine($"push {param.TypeOfEntry.As<VarType>().OffsetName}");
                             break;
                         default:
                             //idk should never happen
                             break;
                     }
-                    Match(Tokens.IdT);
-                    ParamsRest();
                 }
                 else
                 {
@@ -551,7 +584,7 @@ namespace JavaCompiler
 
             if (Globals.Token == Tokens.NumT || Globals.Token == Tokens.TrueT || Globals.Token == Tokens.FalseT)
             {
-                _printer.PrintLine($"push {Globals.Lexeme}");
+                _tacWriter.PrintLine($"push {Globals.Lexeme}");
 
                 if (Globals.Token == Tokens.NumT)
                 {
@@ -585,10 +618,10 @@ namespace JavaCompiler
                     switch (param.TypeOfEntry.Tag)
                     {
                         case EntryType.ConstantType:
-                            _printer.PrintLine($"push {param.TypeOfEntry.As<ConstantType>().OffsetName}");
+                            _tacWriter.PrintLine($"push {param.TypeOfEntry.As<ConstantType>().OffsetName}");
                             break;
                         case EntryType.VarType:
-                            _printer.PrintLine($"push {param.TypeOfEntry.As<VarType>().OffsetName}");
+                            _tacWriter.PrintLine($"push {param.TypeOfEntry.As<VarType>().OffsetName}");
                             break;
                         default:
                             //idk should never happen
@@ -606,7 +639,7 @@ namespace JavaCompiler
 
             if (Globals.Token == Tokens.NumT || Globals.Token == Tokens.TrueT || Globals.Token == Tokens.FalseT)
             {
-                _printer.PrintLine($"push {Globals.Lexeme}");
+                _tacWriter.PrintLine($"push {Globals.Lexeme}");
 
                 if (Globals.Token == Tokens.NumT)
                 {
@@ -625,7 +658,142 @@ namespace JavaCompiler
             }
         }
 
-        private void Match(Tokens token)
+        private void IOStat()
+        {
+            if (Globals.Token == Tokens.ReadT)
+            {
+                InStat();
+            }
+            else if (Globals.Token == Tokens.WriteT || Globals.Token == Tokens.WritelnT)
+            {
+                OutStat();
+            }
+        }
+
+        private void InStat()
+        {
+            Match(Tokens.ReadT);
+            Match(Tokens.LParenT);
+            IdList();
+            Match(Tokens.RParenT);
+        }
+
+        private void IdList()
+        {
+            var entry = _symTab.Lookup(Globals.Lexeme);
+
+            if (entry != null)
+            {
+                switch (entry.TypeOfEntry.Tag)
+                {
+                    case EntryType.ConstantType:
+                        _tacWriter.PrintLine($"rdi {entry.TypeOfEntry.As<ConstantType>().OffsetName}");
+                        break;
+                    case EntryType.VarType:
+                        _tacWriter.PrintLine($"rdi {entry.TypeOfEntry.As<VarType>().OffsetName}");
+                        break;
+                    default:
+                        //idk should never happen
+                        break;
+                }
+            }
+            else
+            {
+                ConsoleLogger.UndeclaredVariable(Globals.Lexeme, Globals.LineNo);
+            }
+
+            Match(Tokens.IdT);
+            IdListTail();
+        }
+
+        private void IdListTail()
+        {
+            if (Globals.Token != Tokens.CommaT)
+                return;
+            Match(Tokens.CommaT);
+            Match(Tokens.IdT);
+            IdListTail();
+        }
+
+        private void OutStat()
+        {
+            if (Globals.Token == Tokens.WriteT)
+            {
+                Match(Tokens.WriteT);
+                Match(Tokens.LParenT);
+                WriteList();
+                Match(Tokens.RParenT);
+            }
+            else if (Globals.Token == Tokens.WritelnT)
+            {
+                Match(Tokens.WritelnT);
+                Match(Tokens.LParenT);
+                WriteList();
+                _tacWriter.PrintLine($"wrln");
+                Match(Tokens.RParenT);
+            }
+        }
+
+        private void WriteList()
+        {
+            WriteToken();
+            WriteListTail();
+        }
+
+        private void WriteListTail()
+        {
+            if (Globals.Token != Tokens.CommaT)
+                return;
+            Match(Tokens.CommaT);
+            WriteToken();
+            WriteListTail();
+        }
+
+        private void WriteToken()
+        {
+            if (Globals.Token == Tokens.IdT)
+            {
+                var entry = _symTab.Lookup(Globals.Lexeme);
+
+                if (entry != null)
+                {
+                    switch (entry.TypeOfEntry.Tag)
+                    {
+                        case EntryType.ConstantType:
+                            _tacWriter.PrintLine($"wri {entry.TypeOfEntry.As<ConstantType>().OffsetName}");
+                            break;
+                        case EntryType.VarType:
+                            _tacWriter.PrintLine($"wri {entry.TypeOfEntry.As<VarType>().OffsetName}");
+                            break;
+                        default:
+                            //idk should never happen
+                            break;
+                    }
+                }
+                else
+                {
+                    ConsoleLogger.UndeclaredVariable(Globals.Lexeme, Globals.LineNo);
+                }
+
+                Match(Tokens.IdT);
+            }
+            else if (Globals.Token == Tokens.NumT)
+            {
+                _tacWriter.PrintLine($"wri {Globals.Lexeme}");
+                Match(Tokens.NumT);
+            }
+            else if (Globals.Token == Tokens.QuoteT)
+            {
+                Match(Tokens.QuoteT);
+                _tacWriter.PrintLine($"wrs S{_asmWriter.LiteralCount}");
+                _asmWriter.AddLiteral(Globals.Lexeme);
+                Match(Tokens.LiteralT);
+                Match(Tokens.QuoteT);
+                Globals.IsLiteral = false;
+            }
+        }
+
+            private void Match(Tokens token)
         {
             if (Globals.Token == token)
             {

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Text;
@@ -112,6 +113,7 @@ namespace JavaCompiler
             }
 
             if (letterCount <= 31 || Globals.IsLiteral && Globals.Lexeme.Last() == '"')
+            {
                 switch (Globals.Lexeme)
                 {
                     case "class":
@@ -174,6 +176,15 @@ namespace JavaCompiler
                     case "new":
                         Globals.Token = Tokens.NewT;
                         break;
+                    case "write":
+                        Globals.Token = Tokens.WriteT;
+                        break;
+                    case "writeln":
+                        Globals.Token = Tokens.WritelnT;
+                        break;
+                    case "read":
+                        Globals.Token = Tokens.ReadT;
+                        break;
                     default:
                         if (Globals.IsLiteral)
                         {
@@ -187,6 +198,7 @@ namespace JavaCompiler
 
                         break;
                 }
+            }
             else
                 ConsoleLogger.IllegalLexeme(Globals.Lexeme, Globals.LineNo);
         }

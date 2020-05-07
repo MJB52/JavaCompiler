@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 namespace JavaCompiler
 {
-    public class Printer : IPrinter
+    public class TACWriter : ITACWriter
     {
         public string FileName { get; private set; }
         public int Offset { get; set; } = 2;
         private List<string> _tacData = new List<string>();
 
-        public Printer(string fileName = "")
+        public TACWriter(string fileName = "")
         {
             if(fileName == "")
             {
@@ -19,7 +19,6 @@ namespace JavaCompiler
             }
 
             FileName = fileName;
-            Console.WriteLine(FileName);
         }
 
         public void PrintLine(string line)
