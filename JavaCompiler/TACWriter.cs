@@ -19,7 +19,6 @@ namespace JavaCompiler
             }
 
             FileName = fileName;
-            Console.WriteLine(FileName);
         }
 
         public void PrintLine(string line)

@@ -13,6 +13,7 @@ namespace JavaCompiler
     {
         private static void Main(string[] args)
         {
+            args = new string[] { "test4.java" };
             if (args.Length < 1)
             {
                  ConsoleLogger.NoFilePassed();
@@ -30,12 +31,18 @@ namespace JavaCompiler
             var tacFile = args[0].Substring(0, args[0].LastIndexOf('.')) + ".tac";
             var tacPath = Path.Combine(cwd, tacFile);
 
+            var asmFile = args[0].Substring(0, args[0].LastIndexOf('.')) + ".asm";
+            var asmPath = Path.Combine(cwd, asmFile);
+
             var scanner = new Scanner(inputFilePath);
-            var symTab = new SymbolTable(Globals.PrimeNo);
             var printer = new TACWriter(tacPath);
-            var parser = new Parser(scanner, symTab, printer);
+            var reader = new TACReader(tacPath);
+            var asmWriter = new ASMWriter(asmPath, reader);
+            var symTab = new SymbolTable(Globals.PrimeNo);
+            var parser = new Parser(scanner, symTab, printer, asmWriter);
             scanner.GetNextToken();
             parser.Prog();
+            asmWriter.GenerateASMFile();
         }
     }
 }

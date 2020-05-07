@@ -8,12 +8,14 @@ namespace JavaCompiler
         private readonly IScanner _scanner;
         private readonly ISymbolTable _symTab;
         private readonly ITACWriter _tacWriter;
+        private readonly IASMWriter _asmWriter;
 
-        public Parser(IScanner scanner, ISymbolTable symTab, ITACWriter printer)
+        public Parser(IScanner scanner, ISymbolTable symTab, ITACWriter printer, IASMWriter writer)
         {
             _scanner = scanner ?? throw new ArgumentNullException(nameof(scanner));
             _symTab = symTab ?? throw new ArgumentNullException(nameof(symTab));
             _tacWriter = printer ?? throw new ArgumentNullException(nameof(printer));
+            _asmWriter = writer ?? throw new ArgumentNullException(nameof(writer));
         }
 
         public void Prog()
@@ -41,6 +43,14 @@ namespace JavaCompiler
             var type = _symTab.Lookup(Globals.Lexeme);
             type.TypeOfEntry = new Union<EntryType>(new ClassType(), EntryType.ClassType);
             _tacWriter.PrintLine("proc main");
+            _asmWriter.MainProc = "main";
+            _asmWriter.AddFunction(new TableNode
+            {
+                Depth = Globals.Depth,
+                Lexeme = new Lexeme("main"),
+                Token = Tokens.MainT,
+                TypeOfEntry = new Union<EntryType>(new FunctionType(), EntryType.FunctionType)
+            });
             Match(Tokens.IdT);
             //Globals.Depth++;
             Match(Tokens.LBraceT);
@@ -262,6 +272,7 @@ namespace JavaCompiler
             Globals.Offset = 0;
             var temp = _symTab.Lookup(lex) ?? throw new ParseErrorException();
             temp.TypeOfEntry = new Union<EntryType>(Globals.FuncT, EntryType.FunctionType);
+            _asmWriter.AddFunction(temp);
             _tacWriter.PrintLine($"endp {lex}");
 
             MethodDecl();
@@ -324,7 +335,7 @@ namespace JavaCompiler
 
         private void SeqOfStatements()
         {
-            if (Globals.Token != Tokens.IdT) // will need to add more here when IOStat gets defined
+            if (Globals.Token != Tokens.IdT && Globals.Token != Tokens.WriteT && Globals.Token != Tokens.WritelnT && Globals.Token != Tokens.ReadT)
                 return;
             
             Statement();
@@ -369,21 +380,48 @@ namespace JavaCompiler
                 Match(Tokens.IdT);
                 Match(Tokens.AssignOpT);
 
-                Expr();
-                string temp = string.Empty;
-                switch (assign.TypeOfEntry.Tag)
+                var method = _symTab.Lookup(Globals.Lexeme);
+                if (method != null && (method.TypeOfEntry.Tag == EntryType.ClassType))
                 {
-                    case EntryType.ConstantType:
-                        temp = assign.TypeOfEntry.As<ConstantType>().OffsetName;
-                        break;
-                    case EntryType.VarType:
-                        temp = assign.TypeOfEntry.As<VarType>().OffsetName;
-                        break;
-                    default:
-                        //idk should never happen
-                        break;
+                    Match(Tokens.IdT);
+                    Match(Tokens.PeriodT);
+                    string methodName = Globals.Lexeme;
+                    Match(Tokens.IdT);
+                    Match(Tokens.LParenT);
+                    ParamsList();
+                    Match(Tokens.RParenT);
+                    _tacWriter.PrintLine($"call {methodName}");
+                    switch (assign.TypeOfEntry.Tag)
+                    {
+                        case EntryType.ConstantType:
+                            _tacWriter.PrintLine($"{assign.TypeOfEntry.As<ConstantType>().OffsetName} = _ax");
+                            break;
+                        case EntryType.VarType:
+                            _tacWriter.PrintLine($"{assign.TypeOfEntry.As<VarType>().OffsetName} = _ax");
+                            break;
+                        default:
+                            //idk should never happen
+                            break;
+                    }
                 }
-                _tacWriter.PrintLine($"{temp} = {Globals.TempOffsetName}");
+                else
+                {
+                    Expr();
+                    string temp = string.Empty;
+                    switch (assign.TypeOfEntry.Tag)
+                    {
+                        case EntryType.ConstantType:
+                            temp = assign.TypeOfEntry.As<ConstantType>().OffsetName;
+                            break;
+                        case EntryType.VarType:
+                            temp = assign.TypeOfEntry.As<VarType>().OffsetName;
+                            break;
+                        default:
+                            //idk should never happen
+                            break;
+                    }
+                    _tacWriter.PrintLine($"{temp} = {Globals.TempOffsetName}");
+                }
             }
         }
 
@@ -522,6 +560,8 @@ namespace JavaCompiler
 
                 if (param != null)
                 {
+                    Match(Tokens.IdT);
+                    ParamsRest();
                     switch (param.TypeOfEntry.Tag)
                     {
                         case EntryType.ConstantType:
@@ -534,8 +574,6 @@ namespace JavaCompiler
                             //idk should never happen
                             break;
                     }
-                    Match(Tokens.IdT);
-                    ParamsRest();
                 }
                 else
                 {
@@ -632,9 +670,6 @@ namespace JavaCompiler
             }
         }
 
-        /// <summary>
-        /// InStat -> read ( IdList )
-        /// </summary>
         private void InStat()
         {
             Match(Tokens.ReadT);
@@ -643,9 +678,6 @@ namespace JavaCompiler
             Match(Tokens.RParenT);
         }
 
-        /// <summary>
-        /// IdList -> IdT IdListTail
-        /// </summary>
         private void IdList()
         {
             var entry = _symTab.Lookup(Globals.Lexeme);
@@ -674,22 +706,15 @@ namespace JavaCompiler
             IdListTail();
         }
 
-        /// <summary>
-        /// IdListTail -> , IdT IdListTail | ε
-        /// </summary>
         private void IdListTail()
         {
-            if (Globals.Token == Tokens.CommaT)
-            {
-                Match(Tokens.CommaT);
-                Match(Tokens.IdT);
-                IdListTail();
-            }
+            if (Globals.Token != Tokens.CommaT)
+                return;
+            Match(Tokens.CommaT);
+            Match(Tokens.IdT);
+            IdListTail();
         }
 
-        /// <summary>
-        /// OutStat -> write ( WriteList ) | writeln ( WriteList )
-        /// </summary>
         private void OutStat()
         {
             if (Globals.Token == Tokens.WriteT)
@@ -709,31 +734,21 @@ namespace JavaCompiler
             }
         }
 
-        /// <summary>
-        /// WriteList -> WriteToken WriteListTail
-        /// </summary>
         private void WriteList()
         {
             WriteToken();
             WriteListTail();
         }
 
-        /// <summary>
-        /// WriteListTail -> , WriteToken WriteListTail | ε
-        /// </summary>
         private void WriteListTail()
         {
-            if (Globals.Token == Tokens.CommaT)
-            {
-                Match(Tokens.CommaT);
-                WriteToken();
-                WriteListTail();
-            }
+            if (Globals.Token != Tokens.CommaT)
+                return;
+            Match(Tokens.CommaT);
+            WriteToken();
+            WriteListTail();
         }
 
-        /// <summary>
-        /// WriteToken -> IdT | NumT | QuoteT
-        /// </summary>
         private void WriteToken()
         {
             if (Globals.Token == Tokens.IdT)
@@ -767,11 +782,14 @@ namespace JavaCompiler
                 _tacWriter.PrintLine($"wri {Globals.Lexeme}");
                 Match(Tokens.NumT);
             }
-            else if (Globals.Token == Tokens.LiteralT)
+            else if (Globals.Token == Tokens.QuoteT)
             {
-                _tacWriter.PrintLine($"wrs S{AssemblyFile.literalNum}");
-                AssemblyFile.AddLiteral(Globals.Lexeme);
+                Match(Tokens.QuoteT);
+                _tacWriter.PrintLine($"wrs S{_asmWriter.LiteralCount}");
+                _asmWriter.AddLiteral(Globals.Lexeme);
                 Match(Tokens.LiteralT);
+                Match(Tokens.QuoteT);
+                Globals.IsLiteral = false;
             }
         }
 

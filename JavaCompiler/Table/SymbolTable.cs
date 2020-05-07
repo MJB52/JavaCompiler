@@ -33,7 +33,7 @@ namespace JavaCompiler
             //check for duplicates 
             var hash = Hash(lex);
             CheckForDupes(hash, lex, depth);
-            _table[(int) hash].AddLast(node);
+            _table[(int) hash].AddFirst(node);
         }
 
         private void CheckForDupes(uint hash, string lex, int depth)
@@ -141,108 +141,6 @@ namespace JavaCompiler
             }
 
             return hash % _tableSize;
-        }
-
-        /// <summary>
-        ///     All of these Node Creation methods will return a TableNode with the correct "Type" assigned in the TypeOfEntry
-        ///     union. They could probably all be consolidated into one method but i can do that in the future
-        /// </summary>
-        /// <param name="lex"></param>
-        /// <param name="token"></param>
-        /// <param name="depth"></param>
-        /// <returns>TableNode</returns>
-        private TableNode CreateConstantNode(string lex, Tokens token, int depth)
-        {
-            var type = new ConstantType
-            {
-                Offset = 0
-            };
-
-            return new TableNode
-            {
-                TypeOfEntry = new Union<EntryType>(type, EntryType.ConstantType),
-                Token = token,
-                Depth = depth,
-                Lexeme = new Lexeme(lex)
-            };
-        }
-
-        /// <summary>
-        ///     All of these Node Creation methods will return a TableNode with the correct "Type" assigned in the TypeOfEntry
-        ///     union. They could probably all be consolidated into one method but i can do that in the future
-        /// </summary>
-        /// <param name="lex"></param>
-        /// <param name="token"></param>
-        /// <param name="depth"></param>
-        /// <returns>TableNode</returns>
-        private TableNode CreateFunctionNode(string lex, Tokens token, int depth)
-        {
-            var type = new FunctionType
-            {
-                ParamList = new LinkedList<ParameterNode>(),
-                ParamaterOffsetSize = 0,
-                SizeOfLocal = 0,
-                TotalSize = 0
-            };
-
-            return new TableNode
-            {
-                TypeOfEntry = new Union<EntryType>(type, EntryType.FunctionType),
-                Token = token,
-                Depth = depth,
-                Lexeme = new Lexeme(lex)
-            };
-        }
-
-        /// <summary>
-        ///     All of these Node Creation methods will return a TableNode with the correct "Type" assigned in the TypeOfEntry
-        ///     union. They could probably all be consolidated into one method but i can do that in the future
-        /// </summary>
-        /// <param name="lex"></param>
-        /// <param name="token"></param>
-        /// <param name="depth"></param>
-        /// <returns>TableNode</returns>
-        private TableNode CreateVarNode(string lex, Tokens token, int depth)
-        {
-            var type = new VarType
-            {
-                Offset = 0,
-                Size = 0,
-            };
-
-            return new TableNode
-            {
-                TypeOfEntry = new Union<EntryType>(type, EntryType.VarType),
-                Token = token,
-                Depth = depth,
-                Lexeme = new Lexeme(lex)
-            };
-        }
-
-        /// <summary>
-        ///     All of these Node Creation methods will return a TableNode with the correct "Type" assigned in the TypeOfEntry
-        ///     union. They could probably all be consolidated into one method but i can do that in the future
-        /// </summary>
-        /// <param name="lex"></param>
-        /// <param name="token"></param>
-        /// <param name="depth"></param>
-        /// <returns>TableNode</returns>
-        private TableNode CreateClassNode(string lex, Tokens token, int depth)
-        {
-            var type = new ClassType
-            {
-                Size = 0,
-                VariableNames = new LinkedList<string>(),
-                MethodNames = new LinkedList<string>()
-            };
-
-            return new TableNode
-            {
-                TypeOfEntry = new Union<EntryType>(type, EntryType.ClassType),
-                Token = token,
-                Depth = depth,
-                Lexeme = new Lexeme(lex)
-            };
         }
     }
 }
