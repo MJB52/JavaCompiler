@@ -1,6 +1,6 @@
 # JavaCompiler
 
-##Written by Michael Bauer
+## Written by Michael Bauer
 
 This is in no way a complete or perfect compiler. 
 
