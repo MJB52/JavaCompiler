@@ -13,11 +13,10 @@ namespace JavaCompiler
     {
         private static void Main(string[] args)
         {
-            args = new string[] { "test4.java" };
             if (args.Length < 1)
             {
-                 ConsoleLogger.NoFilePassed();
-                 Environment.Exit(-1);
+                ConsoleLogger.NoFilePassed();
+                Environment.Exit(-1);
             }
 
             var cwd = Directory.GetCurrentDirectory();
@@ -25,9 +24,10 @@ namespace JavaCompiler
 
             if (!File.Exists(inputFilePath))
             {
-                 ConsoleLogger.FileNotFound(args[0]);
-                 Environment.Exit(-1);
+                ConsoleLogger.FileNotFound(args[0]);
+                Environment.Exit(-1);
             }
+
             var tacFile = args[0].Substring(0, args[0].LastIndexOf('.')) + ".tac";
             var tacPath = Path.Combine(cwd, tacFile);
 
@@ -42,7 +42,7 @@ namespace JavaCompiler
             var parser = new Parser(scanner, symTab, printer, asmWriter);
             scanner.GetNextToken();
             parser.Prog();
-            asmWriter.GenerateASMFile();
+            asmWriter.StartPrint();
         }
     }
 }

@@ -1,31 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace JavaCompiler
 {
-    class ASMWriter : IASMWriter
+    internal class ASMWriter : IASMWriter
     {
-        public string Filename { get; set; }
-        public string MainProc { get; set; } = string.Empty;
-        public int LiteralCount { get; set; } = 0;
-        private List<string> _asmData = new List<string>();
-        private List<string> _literals = new List<string>();
-        private ITACReader _tacReader;
+        private readonly List<string> _asmData = new List<string>();
+        private readonly List<string> _literals = new List<string>();
+        private readonly ITACReader _tacReader;
 
         public LinkedList<TableNode> Functions = new LinkedList<TableNode>();
 
         public ASMWriter(string filename, ITACReader reader)
         {
-            if (filename == "")
-            {
-                ConsoleLogger.NoFilePassed();
-            }
+            if (filename == "") ConsoleLogger.NoFilePassed();
 
             Filename = filename;
             _tacReader = reader ?? throw new ArgumentNullException(nameof(reader));
         }
+
+        public string Filename { get; set; }
+        public string MainProc { get; set; } = string.Empty;
+        public int LiteralCount { get; set; }
 
         public void AddLiteral(string literal)
         {
@@ -38,52 +35,50 @@ namespace JavaCompiler
             Functions.AddLast(node);
         }
 
-        public void GenerateASMFile()
+        public void StartPrint()
         {
             if (!_tacReader.Open())
                 return;
             Globals.Ch = ' ';
-            GenerateProgBeginningASM();
-            GenerateStartProcASM();
-            GenerateProcsASM();
+            PrintBeginningFile();
+            PrintDefaultProc();
+            PrintProcs();
 
             _asmData.Add("END start");
-            File.WriteAllLines(Filename,_asmData);
+            File.WriteAllLines(Filename, _asmData);
         }
 
-        private void GenerateProgBeginningASM()
+        private void PrintBeginningFile()
         {
             _asmData.Add("     .model small");
             _asmData.Add("     .586");
             _asmData.Add("     .stack 100h");
             _asmData.Add("     .data");
 
-            for(int i = 0; i < _literals.Count; i++)
-            {
+            for (var i = 0; i < _literals.Count; i++)
                 _asmData.Add(string.Format("S{0, -4} DB    \"{1, 0}\", \"$\"", i, _literals[i]));
-            }
 
             _asmData.Add("     .code");
             _asmData.Add("     include io.asm");
         }
 
-        private void GenerateStartProcASM()
+        private void PrintDefaultProc()
         {
-                _asmData.Add("");
-                _asmData.Add("start PROC");
-                _asmData.Add("     mov ax, @data");
-                _asmData.Add("     mov ds, ax");
-                _asmData.Add($"     call {MainProc}");
-                _asmData.Add("     mov ah, 04ch");
-                _asmData.Add("     int 21h");
-                _asmData.Add("start ENDP");
+            _asmData.Add("");
+            _asmData.Add("start PROC");
+            _asmData.Add("     mov ax, @data");
+            _asmData.Add("     mov ds, ax");
+            _asmData.Add($"     call {MainProc}");
+            _asmData.Add("     mov ah, 04ch");
+            _asmData.Add("     int 21h");
+            _asmData.Add("start ENDP");
         }
 
-        private void GenerateProcsASM()
+        private void PrintProcs()
         {
             var enumerator = Functions.GetEnumerator();
 
-            while(enumerator.MoveNext())
+            while (enumerator.MoveNext())
             {
                 var node = enumerator.Current;
                 var function = node.TypeOfEntry.As<FunctionType>();
@@ -93,7 +88,7 @@ namespace JavaCompiler
                 _asmData.Add("     mov bp, sp");
                 _asmData.Add($"     sub sp, {function.SizeOfLocal}");
 
-                GenerateProcBodyASM();
+                PrintTac();
 
                 _asmData.Add($"     add sp, {function.SizeOfLocal}");
                 _asmData.Add("     pop bp");
@@ -102,29 +97,25 @@ namespace JavaCompiler
             }
         }
 
-        private void GenerateProcBodyASM()
+        private void PrintTac()
         {
-            string tacWord = GetAndFormatWord();
+            var tacWord = GetWord();
 
             while (tacWord != "endp")
             {
-                var keywords = new List<string> { "proc", "endp", "wrs", "wri", "wrln", "rdi", "call", "push" };
+                var keywords = new List<string> {"proc", "endp", "wrs", "wri", "wrln", "rdi", "call", "push"};
                 if (keywords.Contains(tacWord))
-                {
-                    GenerateProcLineUsingKeywordASM(tacWord);
-                }
+                    GenerateTac(tacWord);
                 else
-                {
-                    GenerateProcLineUsingVariableASM(tacWord);
-                }
+                    BuildVarLine(tacWord);
 
-                tacWord = GetAndFormatWord();
+                tacWord = GetWord();
             }
 
             _tacReader.GetNextWord();
         }
 
-        private void GenerateProcLineUsingKeywordASM(string tacWord)
+        private void GenerateTac(string tacWord)
         {
             if (tacWord == "proc")
             {
@@ -132,121 +123,116 @@ namespace JavaCompiler
             }
             else if (tacWord == "wrs")
             {
-                    _asmData.Add($"     mov dx, offset {_tacReader.GetNextWord()}");
-                    _asmData.Add("     call writestr");
+                _asmData.Add($"     mov dx, offset {_tacReader.GetNextWord()}");
+                _asmData.Add("     call writestr");
             }
             else if (tacWord == "wri")
             {
-                string bpWord = GetAndFormatWord();
-                    _asmData.Add($"     mov dx, {bpWord}");
-                    _asmData.Add($"     call writeint");
+                var bpWord = GetWord();
+                _asmData.Add($"     mov dx, {bpWord}");
+                _asmData.Add("     call writeint");
             }
             else if (tacWord == "wrln")
             {
-                    _asmData.Add($"     call writeln");
+                _asmData.Add("     call writeln");
             }
             else if (tacWord == "rdi")
             {
-                string bpWord = GetAndFormatWord();
-                    _asmData.Add($"     call readint");
-                    _asmData.Add($"     mov {bpWord}, bx");
+                var bpWord = GetWord();
+                _asmData.Add("     call readint");
+                _asmData.Add($"     mov {bpWord}, bx");
             }
             else if (tacWord == "call")
             {
-                    _asmData.Add($"     call {_tacReader.GetNextWord()}");
+                _asmData.Add($"     call {_tacReader.GetNextWord()}");
             }
             else if (tacWord == "push")
             {
-                    _asmData.Add($"     mov ax, {GetAndFormatWord()}");
-                    _asmData.Add($"     push ax");
+                _asmData.Add($"     mov ax, {GetWord()}");
+                _asmData.Add("     push ax");
             }
         }
 
-        private void GenerateProcLineUsingVariableASM(string tacWord)
+        private void BuildVarLine(string tacWord)
         {
             if (tacWord == "_ax")
             {
                 _tacReader.GetNextWord();
-                    _asmData.Add($"     mov ax, {GetAndFormatWord()}");
+                _asmData.Add($"     mov ax, {GetWord()}");
             }
             else
             {
-                _tacReader.GetNextWord(); // skip equal sign
-                string axReg = GetAndFormatWord();
-                char opChar = _tacReader.PeekNextChar();
+                _tacReader.GetNextWord();
+                var reg = GetWord();
+                var operation = _tacReader.PeekNextChar();
 
-                if (opChar == '*' || opChar == '/' || opChar == '-' || opChar == '+')
-                {
-                    GenerateOperationLineASM(opChar, axReg, tacWord);
-                }
+                if (operation == '*' || operation == '/' || operation == '-' || operation == '+')
+                    PrintOperation(operation, reg, tacWord);
                 else
-                {
-                    GenerateAssignmentLineASM(axReg, tacWord);
-                }
+                    PrintAssign(reg, tacWord);
             }
         }
 
-        private void GenerateOperationLineASM(char opChar, string axReg, string tacWord)
+        private void PrintOperation(char operation, string reg, string tacWord)
         {
-            _tacReader.GetNextWord(); // skip operator
+            _tacReader.GetNextWord();
 
-            if (opChar == '+')
+            if (operation == '+')
             {
-                    _asmData.Add($"     mov ax, {axReg}");
-                    _asmData.Add($"     add ax, {GetAndFormatWord()}");
-                    _asmData.Add($"     mov {tacWord}, ax");
-            }
-            else if (opChar == '-')
-            {
-                    _asmData.Add($"     mov ax, {axReg}");
-                    _asmData.Add($"     sub ax, {GetAndFormatWord()}");
-                    _asmData.Add($"     mov {tacWord}, ax");
-            }
-            else if (opChar == '/')
-            {
-                _asmData.Add($"     mov ax, {axReg}");
-                _asmData.Add($"     cwd");
-                _asmData.Add($"     mov bx, {GetAndFormatWord()}");
-                _asmData.Add($"     idiv bx");
+                _asmData.Add($"     mov ax, {reg}");
+                _asmData.Add($"     add ax, {GetWord()}");
                 _asmData.Add($"     mov {tacWord}, ax");
             }
-            else if (opChar == '*')
+            else if (operation == '-')
             {
-                _asmData.Add($"     mov ax, {axReg}");
-                _asmData.Add($"     mov bx, {GetAndFormatWord()}");
-                _asmData.Add($"     imul bx");
+                _asmData.Add($"     mov ax, {reg}");
+                _asmData.Add($"     sub ax, {GetWord()}");
+                _asmData.Add($"     mov {tacWord}, ax");
+            }
+            else if (operation == '/')
+            {
+                _asmData.Add($"     mov ax, {reg}");
+                _asmData.Add("     cwd");
+                _asmData.Add($"     mov bx, {GetWord()}");
+                _asmData.Add("     idiv bx");
+                _asmData.Add($"     mov {tacWord}, ax");
+            }
+            else if (operation == '*')
+            {
+                _asmData.Add($"     mov ax, {reg}");
+                _asmData.Add($"     mov bx, {GetWord()}");
+                _asmData.Add("     imul bx");
                 _asmData.Add($"     mov {tacWord}, ax");
             }
         }
 
-        private void GenerateAssignmentLineASM(string axReg, string tacWord)
+        private void PrintAssign(string reg, string tacWord)
         {
-            if (axReg.Contains("ax"))
+            if (reg.Contains("ax"))
             {
-                    _asmData.Add($"     mov {tacWord}, ax");
+                _asmData.Add($"     mov {tacWord}, ax");
             }
             else if (tacWord.Contains("ax"))
             {
-                    _asmData.Add($"     mov ax, {axReg}");
+                _asmData.Add($"     mov ax, {reg}");
             }
             else
             {
-                    _asmData.Add($"     mov ax, {axReg}");
-                    _asmData.Add($"     mov {tacWord}, ax");
+                _asmData.Add($"     mov ax, {reg}");
+                _asmData.Add($"     mov {tacWord}, ax");
 
-                if (!axReg.Contains("bp") && !int.TryParse(axReg, out int result))
-                {
-                    tacWord = GetAndFormatWord();
-                    _tacReader.GetNextWord(); // skip equal sign
-                        _asmData.Add($"     mov ax, {GetAndFormatWord()}");
-                        _asmData.Add($"     mov {tacWord}, ax");
-                }
+                if (reg.Contains("bp") || int.TryParse(reg, out _))
+                    return;
+                tacWord = GetWord();
+                _tacReader.GetNextWord();
+                _asmData.Add($"     mov ax, {GetWord()}");
+                _asmData.Add($"     mov {tacWord}, ax");
             }
         }
 
-        private string GetAndFormatWord()
+        private string GetWord()
         {
-            string word = _tacReader.GetNextWord();
+            var word = _tacReader.GetNextWord();
 
             if (word[0] == '_')
             {
